@@ -8,26 +8,34 @@ import {
 } from "@/shared/errors";
 import * as repository from "./repository";
 import type { z } from "zod";
-import type { taskSchema, updateTaskSchema } from "./schemas";
+import type { commentSchema, phaseSchema, taskSchema, updatePhaseSchema, updateTaskSchema } from "./schemas";
+import { summarizePhase } from "./planning";
 
 export async function getGantt(teamId: string, userId: string) {
   const member = await requireMembership(teamId, userId);
-  const [diagrams, tasks] = await Promise.all([
+  const [diagrams, tasks, phases, dependencies, comments] = await Promise.all([
     repository.diagrams(teamId),
     repository.tasks(teamId),
+    repository.phases(teamId),
+    repository.dependencies(teamId),
+    repository.comments(teamId),
   ]);
   const users = await findUsersByIds([
     ...new Set(
-      tasks.flatMap((task) => [
+      [...comments.map(comment => comment.userId), ...tasks.flatMap((task) => [
         task.createdBy,
         ...(task.assigneeId ? [task.assigneeId] : []),
-      ]),
+      ])],
     ),
   ]);
   return {
     diagrams,
+    phases: phases.map(phase => ({ ...phase, ...summarizePhase(tasks.filter(task => task.phaseId === phase.id)), canEdit: member.role === "owner" || phase.createdBy === userId })),
+    comments: comments.map(comment => ({ ...comment, authorName: users.find(user => user.id === comment.userId)?.name ?? "Exmiembro" })),
+    dependencies,
     tasks: tasks.map((task) => ({
       ...task,
+      dependencyIds: dependencies.filter(edge => edge.taskId === task.id).map(edge => edge.dependsOnId),
       assigneeName:
         users.find((user) => user.id === task.assigneeId)?.name ?? null,
       assigneeGithubUsername:
@@ -76,7 +84,7 @@ export async function addTask(
   if (!(await repository.findDiagram(data.teamId, data.diagramId)))
     throw new NotFoundError("No encontramos el diagrama.");
   if (data.assigneeId) await requireMembership(data.teamId, data.assigneeId);
-  return repository.createTask({ ...data, createdBy: userId });
+  return repository.createTask({ ...data, completed: data.status === "done", createdBy: userId });
 }
 async function writable(teamId: string, taskId: string, userId: string) {
   const member = await requireMembership(teamId, userId);
@@ -98,7 +106,7 @@ export async function editTask(
   if (data.assigneeId && data.assigneeId !== task.assigneeId)
     await requireMembership(data.teamId, data.assigneeId);
   const { teamId, taskId, diagramId: _diagramId, ...changes } = data;
-  if (!(await repository.updateTask(teamId, taskId, userId, owner, changes)))
+  if (!(await repository.updateTask(teamId, taskId, userId, owner, { ...changes, completed: data.status === "done" })))
     throw new ForbiddenError(
       "La tarea cambió de responsable. Actualizá el diagrama.",
     );
@@ -126,7 +134,32 @@ export async function setTaskCompleted(
 ) {
   const { owner } = await writable(teamId, taskId, userId);
   if (
-    !(await repository.updateTask(teamId, taskId, userId, owner, { completed }))
+    !(await repository.updateTask(teamId, taskId, userId, owner, { completed, status: completed ? "done" : "pending", progress: completed ? 100 : 0 }))
   )
     throw new ForbiddenError();
+}
+
+export async function addPhase(data: z.output<typeof phaseSchema>, userId: string) {
+  await requireMembership(data.teamId, userId);
+  if (!(await repository.findDiagram(data.teamId, data.diagramId))) throw new NotFoundError("No encontramos el diagrama.");
+  return repository.createPhase({ ...data, createdBy: userId });
+}
+export async function editPhase(data: z.output<typeof updatePhaseSchema>, userId: string) {
+  const member = await requireMembership(data.teamId, userId);
+  const phase = await repository.findPhase(data.teamId, data.phaseId);
+  if (!phase || phase.diagramId !== data.diagramId) throw new NotFoundError("No encontramos la fase.");
+  if (!(await repository.updatePhase(data.teamId, data.phaseId, userId, member.role === "owner", { name: data.name, color: data.color }))) throw new ForbiddenError("Solo el creador o el dueño pueden modificar la fase.");
+}
+export async function removePhase(teamId: string, phaseId: string, userId: string) {
+  const member = await requireMembership(teamId, userId);
+  if (!(await repository.deletePhase(teamId, phaseId, userId, member.role === "owner"))) throw new ForbiddenError("Solo el creador o el dueño pueden eliminar la fase.");
+}
+export async function removeTask(teamId: string, taskId: string, userId: string) {
+  const { owner } = await writable(teamId, taskId, userId);
+  if (!(await repository.deleteTask(teamId, taskId, userId, owner))) throw new ForbiddenError();
+}
+export async function addComment(data: z.output<typeof commentSchema>, userId: string) {
+  await requireMembership(data.teamId, userId);
+  if (!(await repository.findTask(data.teamId, data.taskId))) throw new NotFoundError("No encontramos la tarea.");
+  return repository.createComment({ ...data, userId });
 }

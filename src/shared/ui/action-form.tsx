@@ -14,6 +14,7 @@ export function ActionForm({
   resetOnSuccess = false,
   confirmMessage,
   variant = "primary",
+  footerActions,
 }: {
   action: FormAction;
   children?: ReactNode;
@@ -24,6 +25,7 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   confirmMessage?: string;
   variant?: "primary" | "secondary" | "danger" | "quiet";
+  footerActions?: ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, {
     success: false,
@@ -39,6 +41,15 @@ export function ActionForm({
       onSuccess?.();
     }
   }, [state, onSuccess, resetOnSuccess]);
+  const submitButton = (
+    <button
+      type="submit"
+      className={`button button-${variant}`}
+      disabled={pending}
+    >
+      {pending ? pendingLabel : submitLabel}
+    </button>
+  );
   return (
     <form
       ref={form}
@@ -60,13 +71,9 @@ export function ActionForm({
           {state.message}
         </p>
       )}
-      <button
-        type="submit"
-        className={`button button-${variant}`}
-        disabled={pending}
-      >
-        {pending ? pendingLabel : submitLabel}
-      </button>
+      {footerActions ? (
+        <div className="form-actions">{footerActions}{submitButton}</div>
+      ) : submitButton}
     </form>
   );
 }

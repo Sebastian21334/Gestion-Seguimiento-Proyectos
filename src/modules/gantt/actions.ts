@@ -32,7 +32,7 @@ export async function createGanttTaskAction(
   form: FormData,
 ) {
   return runAction(async () => {
-    const data = schemas.taskSchema.parse(Object.fromEntries(form));
+    const data = schemas.taskSchema.parse({ ...Object.fromEntries(form), dependencyIds: form.getAll("dependencyIds") });
     await service.addTask(data, (await requireCurrentUser()).id);
     revalidatePath("/", "layout");
     return { success: true, message: "Tarea agregada." };
@@ -43,10 +43,48 @@ export async function editGanttTaskAction(
   form: FormData,
 ) {
   return runAction(async () => {
-    const data = schemas.updateTaskSchema.parse(Object.fromEntries(form));
+    const data = schemas.updateTaskSchema.parse({ ...Object.fromEntries(form), dependencyIds: form.getAll("dependencyIds") });
     await service.editTask(data, (await requireCurrentUser()).id);
     revalidatePath("/", "layout");
     return { success: true, message: "Tarea actualizada." };
+  });
+}
+
+export async function createGanttPhaseAction(_previous: ActionState, form: FormData) {
+  return runAction(async () => {
+    await service.addPhase(schemas.phaseSchema.parse(Object.fromEntries(form)), (await requireCurrentUser()).id);
+    revalidatePath("/", "layout");
+    return { success: true, message: "Fase creada." };
+  });
+}
+export async function editGanttPhaseAction(_previous: ActionState, form: FormData) {
+  return runAction(async () => {
+    await service.editPhase(schemas.updatePhaseSchema.parse(Object.fromEntries(form)), (await requireCurrentUser()).id);
+    revalidatePath("/", "layout");
+    return { success: true, message: "Fase actualizada." };
+  });
+}
+export async function deleteGanttPhaseAction(_previous: ActionState, form: FormData) {
+  return runAction(async () => {
+    const data = schemas.phaseIdSchema.parse(Object.fromEntries(form));
+    await service.removePhase(data.teamId, data.phaseId, (await requireCurrentUser()).id);
+    revalidatePath("/", "layout");
+    return { success: true, message: "Fase eliminada. Sus tareas se conservaron sin fase." };
+  });
+}
+export async function deleteGanttTaskAction(_previous: ActionState, form: FormData) {
+  return runAction(async () => {
+    const data = schemas.taskIdSchema.parse(Object.fromEntries(form));
+    await service.removeTask(data.teamId, data.taskId, (await requireCurrentUser()).id);
+    revalidatePath("/", "layout");
+    return { success: true, message: "Tarea eliminada." };
+  });
+}
+export async function addGanttCommentAction(_previous: ActionState, form: FormData) {
+  return runAction(async () => {
+    await service.addComment(schemas.commentSchema.parse(Object.fromEntries(form)), (await requireCurrentUser()).id);
+    revalidatePath("/", "layout");
+    return { success: true, message: "Comentario agregado." };
   });
 }
 export async function moveGanttTaskAction(input: unknown) {

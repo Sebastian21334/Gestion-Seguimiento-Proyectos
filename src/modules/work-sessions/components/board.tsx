@@ -7,6 +7,8 @@ import { Avatar } from "@/shared/ui/avatar";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Icon } from "@/shared/ui/icon";
 import { ReportField } from "./report-field";
+import { SessionHistory } from "./session-history";
+import styles from "./board.module.css";
 import { ReportDownload } from "./report-download";
 import {
   boardAction,
@@ -26,99 +28,6 @@ function elapsed(date: Date | string) {
     : minutes < 60
       ? `Hace ${minutes} min`
       : `Hace ${Math.floor(minutes / 60)} h ${minutes % 60} min`;
-}
-function duration(start: Date | string, end: Date | string | null) {
-  const minutes = Math.max(
-    1,
-    Math.round(
-      (new Date(end ?? Date.now()).getTime() - new Date(start).getTime()) /
-        60_000,
-    ),
-  );
-  return minutes < 60
-    ? `${minutes} min`
-    : `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
-}
-function History({
-  sessions,
-  slug,
-}: {
-  sessions: BoardData["history"];
-  slug: string;
-}) {
-  return (
-    <section className="panel history-panel">
-      <div className="section-heading">
-        <div>
-          <h2>Lo que ya avanzamos</h2>
-          <p className="muted small">Las últimas 20 sesiones del equipo</p>
-        </div>
-        <span className="subtle-icon">
-          <Icon name="clock" />
-        </span>
-      </div>
-      {sessions.length ? (
-        <div className="history-list">
-          {sessions.map((session) => (
-            <div key={session.id} className="history-row">
-              <Avatar
-                name={session.user.name}
-                githubUsername={session.user.githubUsername}
-              />
-              <div className="history-main">
-                <div>
-                  <strong>{session.user.name}</strong>
-                  <span className="muted small"> terminó </span>
-                  <Link
-                    href={`/t/${slug}/miembros/${session.userId}`}
-                    className="area-inline"
-                  >
-                    {session.title}
-                  </Link>
-                </div>
-                <p>{session.description}</p>
-                <p>
-                  Gantt:{" "}
-                  {session.ganttTask
-                    ? `${session.ganttDiagramName} · ${session.ganttTask.title}`
-                    : "Sin asociación (sesión anterior)"}
-                </p>
-                <p>
-                  Inicio:{" "}
-                  {new Date(session.startedAt).toLocaleString("es-AR", {
-                    timeZone: "America/Argentina/Buenos_Aires",
-                  })}{" "}
-                  · Fin:{" "}
-                  {session.endedAt
-                    ? new Date(session.endedAt).toLocaleString("es-AR", {
-                        timeZone: "America/Argentina/Buenos_Aires",
-                      })
-                    : "En curso"}
-                </p>
-                {session.reports.map((report) => (
-                  <ReportDownload
-                    key={report.id}
-                    teamId={session.teamId}
-                    sessionId={session.id}
-                    reportId={report.id}
-                    name={report.name}
-                  />
-                ))}
-              </div>
-              <span className="duration">
-                <Icon name="check" size={14} />
-                {duration(session.startedAt, session.endedAt)}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="El historial empieza con ustedes" icon="clock">
-          Las sesiones terminadas aparecerán acá.
-        </EmptyState>
-      )}
-    </section>
-  );
 }
 export function WorkBoard({
   teamId,
@@ -152,52 +61,51 @@ export function WorkBoard({
     ),
   );
   return (
-    <>
-      <div className="board-summary">
-        <div>
-          <span className="summary-number">
-            {data.active.length.toString().padStart(2, "0")}
-          </span>
-          <span>
-            personas trabajando
-            <br />
-            <strong>ahora mismo</strong>
-          </span>
-        </div>
-        <div className="sync-label">
-          <span className={`live-dot ${error ? "dot-error" : ""}`} />
-          {error
-            ? "Sin actualizar"
-            : isValidating
-              ? "Actualizando…"
-              : "Se actualiza automáticamente"}
-          <span className="sync-interval">cada 9 s</span>
-        </div>
-      </div>
-      {error && (
-        <p className="notice notice-error" role="alert">
-          No pudimos actualizar el tablero. Revisá tu conexión o volvé a iniciar
-          sesión.
-        </p>
-      )}
-      {collisions.length > 0 && (
-        <p className="notice notice-warning" role="status">
-          Hay tareas activas con el mismo título. Coordinen antes de trabajar:{" "}
-          {[...new Set(collisions.map((session) => session.title))].join(", ")}.
-        </p>
-      )}
+    <div className={styles.board}>
       <div className="board-layout">
         <div className="board-main">
+          <div className="board-summary">
+            <div>
+              <span className={styles.summaryIcon}>
+                <Icon name="users" size={24} />
+              </span>
+              <span className="summary-number">
+                {data.active.length.toString().padStart(2, "0")}
+              </span>
+              <span>
+                personas trabajando
+                <br />
+                <strong>ahora mismo</strong>
+              </span>
+            </div>
+            <div className="sync-label">
+              <span className={`live-dot ${error ? "dot-error" : ""}`} />
+              {error
+                ? "Sin actualizar"
+                : isValidating
+                  ? "Actualizando…"
+                  : "Se actualiza automáticamente"}
+              <span className="sync-interval">cada 9 s</span>
+            </div>
+          </div>
+          {error && (
+            <p className="notice notice-error" role="alert">
+              No pudimos actualizar el tablero. Revisá tu conexión o volvé a iniciar
+              sesión.
+            </p>
+          )}
+          {collisions.length > 0 && (
+            <p className="notice notice-warning" role="status">
+              Hay tareas activas con el mismo título. Coordinen antes de trabajar:{" "}
+              {[...new Set(collisions.map((session) => session.title))].join(", ")}.
+            </p>
+          )}
           <section>
             <div className="section-heading">
               <h2>
                 Trabajando ahora{" "}
                 <span className="count-badge">{data.active.length}</span>
               </h2>
-              <span className="live-label">
-                <span className="live-dot" />
-                EN VIVO
-              </span>
             </div>
             {data.active.length ? (
               <div className="session-grid">
@@ -227,8 +135,20 @@ export function WorkBoard({
                       </div>
                       <Icon name="code" size={20} />
                     </div>
-                    <h3 className="session-title">{session.title}</h3>
-                    <p className="session-description">{session.description}</p>
+                    <div className={styles.taskPreview}>
+                      <span className={styles.taskIcon}>
+                        <Icon name="file" size={18} />
+                      </span>
+                      <div>
+                        <span className={styles.taskLabel}>Trabajando en</span>
+                        <h3 className="session-title">{session.title}</h3>
+                        {session.description && (
+                          <p className={styles.taskDescription}>
+                            {session.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                     {session.reports.map((report) => (
                       <ReportDownload
                         key={report.id}
@@ -255,7 +175,7 @@ export function WorkBoard({
               </div>
             )}
           </section>
-          <History sessions={data.history} slug={slug} />
+          <SessionHistory sessions={data.history} slug={slug} />
         </div>
         <aside className="board-aside">
           <section className="panel start-panel">
@@ -327,15 +247,12 @@ export function WorkBoard({
                     maxLength={120}
                     placeholder="Ej. Agregar filtros al tablero"
                   />
-                  <span className="field-hint">
-                    Resumí qué vas a hacer en esta tarea.
-                  </span>
                 </label>
                 <label>
                   Descripción
                   <textarea
                     name="description"
-                    rows={4}
+                    rows={3}
                     required
                     maxLength={1000}
                     placeholder="Un poco de contexto para tus compañeros…"
@@ -374,15 +291,17 @@ export function WorkBoard({
             )}
           </section>
           <div className="tip-card">
-            <Icon name="users" />
+            <span className={styles.tipIcon}>
+              <Icon name="bulb" />
+            </span>
             <strong>El contexto hace la diferencia</strong>
             <p>
-              Una descripción clara ayuda a que el equipo se coordine sin
-              interrumpirse.
+              Una descripción clara ayuda a que el equipo se coordine mejor y
+              evitemos duplicar esfuerzos.
             </p>
           </div>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

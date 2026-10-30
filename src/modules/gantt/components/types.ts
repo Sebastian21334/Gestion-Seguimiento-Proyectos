@@ -3,6 +3,7 @@ import type { ganttPageAction } from "../actions";
 
 export type Gantt = Awaited<ReturnType<typeof ganttPageAction>>;
 export type Task = Gantt["tasks"][number];
+export type Phase = Gantt["phases"][number];
 export type Session = {
   id: string;
   ganttTaskId: string | null;

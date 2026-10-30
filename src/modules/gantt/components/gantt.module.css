@@ -1,0 +1,101 @@
+.page {
+  --phase-violet: #a47aff;
+  --phase-amber: #ffb542;
+  --phase-green: #53ce84;
+  --phase-pink: #f65c9d;
+  --phase-blue: #5c9bfa;
+  --gantt-fixed: 430px;
+}
+.page :global(.g2-workspace.with-panel) { grid-template-columns: minmax(0, 1fr) 365px; gap: 20px; }
+.page :global(.g2-primary), .page :global(.g2-panel .button-primary) { background: #1875ff; border-color: #1875ff; color: white; }
+.page :global(.g2-primary:hover), .page :global(.g2-panel .button-primary:hover) { background: #0964e8; }
+.page :global(.g2-secondary) { display: inline-flex; align-items: center; gap: 5px; height: 37px; align-self: end; padding: 0 12px; background: white; border: 1px solid #dce5f1; border-radius: 7px; color: #38628c; font-size: 11px; }
+.page :global(.g2-scale button.selected), .page :global(.g2-date-ticks > div.today strong) { background: #1875ff; color: white; }
+.page :global(.g2-date-ticks > div.today) { background: #eaf3ff; }
+.page :global(.g2-today-line) { background: #e5f0ff; }
+.chartShell { min-width: 0; container-type: inline-size; }
+.chartGrid :global(.g2-fixed) { grid-template-columns: 210px 58px 100px 62px; width: var(--gantt-fixed); flex-basis: var(--gantt-fixed); }
+.chartGrid :global(.g2-column-head > span), .chartGrid :global(.g2-cells > *) { padding-inline: 10px; }
+.chartGrid :global(.g2-column-head) { font-size: 10px; }
+.chartGrid :global(.g2-row) { min-height: 44px; height: 44px; }
+.chartGrid :global(.g2-task-name) { font-weight: 500; font-size: 11px; }
+.chartGrid :global(.g2-person) { justify-content: center; }
+.chartGrid :global(.g2-person .avatar) { width: 26px; height: 26px; }
+.chartGrid :global(.g2-row.selected), .chartGrid :global(.g2-row.selected .g2-fixed) { background: #eaf3ff; }
+.chartGrid :global(.g2-row:hover .g2-fixed) { background: #f5f9ff; }
+.chartGrid :global(.g2-badge) { padding: 3px 7px; border-radius: 7px; font-size: 10px; }
+.chartGrid :global(.g2-badge.active) { color: #1674f4; background: #e2eeff; }
+.chartGrid :global(.g2-badge.done) { color: #159850; background: #ddf6e6; }
+.chartGrid :global(.g2-bar) { top: 10px; height: 24px; z-index: 3; border-radius: 8px; overflow: hidden; padding-inline: 8px; }
+.chartGrid :global(.g2-bar.active) { background: #a6cbff; }
+.chartGrid :global(.g2-bar.done) { background: #37bd72; }
+.chartGrid :global(.g2-bar.pending) { background: #c3ccd8; }
+.chartGrid :global(.g2-bar.selected) { border-color: white; box-shadow: 0 0 0 3px #a8d0ff; }
+.barFill { position: absolute; inset: 0 auto 0 0; background: #1875ff; border-radius: inherit; pointer-events: none; }
+:global(.g2-bar.done) .barFill { background: #36bd70; }
+.barLabel { position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; pointer-events: none; }
+.barLabel svg { flex-shrink: 0; }
+.chartBody { position: relative; }
+.dependencies { position: absolute; left: var(--gantt-fixed); top: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.rowProgress { text-align: right; color: #40516f; font-size: 11px; font-variant-numeric: tabular-nums; }
+.phaseRow :global(.g2-fixed) { font-weight: 700; }
+.phaseName { display: flex; align-items: center; gap: 6px; }
+.phaseName button { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0; border: 0; color: #263950; background: transparent; text-align: left; font-size: 11px; font-weight: 700; }
+.phaseName button:last-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; }
+.phaseName button:first-child { flex-shrink: 0; padding-block: 10px; }
+.phaseName i { display: inline-block; vertical-align: middle; width: 11px; height: 11px; border-radius: 50%; background: var(--phase-color); margin-right: 8px; }
+.expanded { display: inline-flex; transform: rotate(90deg); }
+.phaseBar { position: absolute; top: 14px; height: 16px; padding: 0; border: 0; border-radius: 12px; background: var(--phase-color); overflow: visible; opacity: .88; }
+.phaseBar::before, .phaseBar::after { content: ""; position: absolute; top: 4px; width: 8px; height: 8px; border: 2px solid var(--phase-color); border-radius: 50%; background: white; z-index: 1; }
+.phaseBar::before { left: -2px; } .phaseBar::after { right: -2px; }
+.phaseBar > span { display: block; height: 100%; border-radius: inherit; background: #ffffff25; }
+.chartGrid :global(.g2-task-name).childTask { padding-left: 32px; }
+.childTask :global(.g2-task-dot) { display: none; }
+.priorityMark { font-size: 11px; color: #ec715a; margin-left: auto; }
+.page :global(.g2-panel-tabs) { gap: 0; padding-inline: 15px; justify-content: space-between; }
+.page :global(.g2-panel-tabs button) { padding: 11px 7px; font-size: 11px; }
+.page :global(.g2-panel-tabs button.selected) { color: #1875ff; border-bottom-color: #1875ff; }
+.page :global(.g2-panel-kicker) { letter-spacing: 0; text-transform: none; font-size: 11px; font-weight: 500; }
+.page :global(.g2-panel-top h2) { font-size: 22px; }
+.page :global(.g2-panel-content) { max-height: calc(100dvh - 160px); }
+.page :global(.g2-fields) { gap: 17px; }
+.page :global(.g2-fields input), .page :global(.g2-fields select), .page :global(.g2-fields textarea) { padding: 9px 10px; border-color: #e0e6f0; }
+.page :global(.g2-fields label) { font-size: 12px; }
+.timeOptions { color: #6e7e98; font-size: 11px; }
+.timeOptions summary { margin-bottom: 8px; }
+.progressControl { display: flex; align-items: center; gap: 14px; }
+.progressControl input { appearance: auto; accent-color: #1875ff; box-shadow: none; padding: 0 !important; height: 20px; border: none; }
+.progressControl output { min-width: 35px; text-align: right; font-size: 12px; color: #40516f; }
+.page .statusSelect { font-weight: 600; }
+.page .statusSelect.active { color: #1875ff; background: #eff6ff; }
+.page .statusSelect.done { color: #169851; background: #edf9f0; }
+.page .statusSelect.pending { color: #6e7e98; background: #f3f5f8; }
+.page .prioritySelect { background: #fff8ee; color: #a56913; }
+.dependencyChoices { border: 1px solid #e5eaf3; border-radius: 8px; padding: 10px; margin: 0; min-width: 0; max-height: 190px; overflow: auto; }
+.dependencyChoices legend { padding-inline: 4px; font-size: 12px; font-weight: 600; color: #405068; }
+.dependencyChoices p { font-size: 10px; line-height: 1.5; color: #8592a6; margin-bottom: 8px; }
+.page .dependencyChoices label { flex-direction: row; align-items: center; font-size: 11px; font-weight: 400; margin-top: 7px; }
+.page .dependencyChoices input { appearance: auto; accent-color: #1875ff; width: 14px; height: 14px; flex-shrink: 0; padding: 0; }
+.dependencyChoices span { overflow-wrap: anywhere; }
+.taskForm :global(.form-actions), .page :global(.g2-panel .form-actions) { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding-top: 14px; margin-top: 3px; border-top: 1px solid #edf1f6; }
+.taskForm :global(.form-actions .button), .page :global(.g2-panel .form-actions .button) { padding: 9px 12px; min-height: 39px; font-size: 11px; }
+.deleteButton { display: inline-flex; align-items: center; gap: 5px; padding: 9px; border: 1px solid #f3b8c2; border-radius: 7px; background: #fff7f8; color: #e54a62; font-size: 11px; margin-right: auto; }
+.creator { margin-top: 12px; color: #92a0b3; font-size: 10px; }
+.phaseHint { margin-bottom: 20px; font-size: 12px; color: #7b8aa2; line-height: 1.7; }
+.phaseSummary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f5f7fc; border-radius: 8px; }
+.phaseSummary dt { font-size: 10px; color: #7a8aa2; }
+.phaseSummary dd { margin: 3px 0 0; font-size: 12px; color: #40516f; }
+.phaseDelete { margin-top: 20px; }
+.comments { display: grid; gap: 15px; }
+.comments article { padding: 12px; border: 1px solid #e4eaf3; border-radius: 8px; }
+.comments strong { display: block; font-size: 12px; }
+.comments time { font-size: 10px; color: #8695ac; }
+.comments article p { margin-top: 8px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@container (max-width: 600px) {
+  .chartGrid { --gantt-fixed: 290px; }
+  .chartGrid :global(.g2-fixed) { grid-template-columns: 155px 0 85px 50px; }
+  .chartGrid :global(.g2-fixed > :nth-child(2)) { visibility: hidden; padding: 0; overflow: hidden; }
+  .chartGrid :global(.g2-column-head > span), .chartGrid :global(.g2-cells > *) { padding-inline: 6px; }
+}
+@media (max-width: 1100px) { .page :global(.g2-workspace.with-panel) { grid-template-columns: minmax(0, 1fr); } .page :global(.g2-panel) { position: fixed; z-index: 50; top: 0; right: 0; bottom: 0; width: min(390px, 100%); border-radius: 12px 0 0 12px; overflow: auto; box-shadow: -8px 0 36px #12264325; } .page :global(.g2-panel-content) { max-height: none; } }
+@media (prefers-reduced-motion: reduce) { .page :global(.g2-panel) { animation: none; } }

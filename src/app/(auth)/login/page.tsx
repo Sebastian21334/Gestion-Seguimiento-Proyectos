@@ -4,7 +4,7 @@ import { LoginForm } from "@/modules/auth/components/forms";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ restablecida?: string }>;
+  searchParams: Promise<{ restablecida?: string; invitacion?: string }>;
 }) {
   const params = await searchParams;
   return (
@@ -12,7 +12,7 @@ export default async function LoginPage({
       title="Qué bueno verte de nuevo"
       description="Entrá a tu espacio y ponete al día con tu equipo."
     >
-      <LoginForm reset={params.restablecida === "1"} />
+      <LoginForm reset={params.restablecida === "1"} invitation={params.invitacion === "1"} />
     </AuthShell>
   );
 }

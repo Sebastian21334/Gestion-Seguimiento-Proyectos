@@ -3,6 +3,7 @@ const mocks = vi.hoisted(() => ({ membership: vi.fn(), task: vi.fn(), update: vi
 vi.mock("@/modules/teams", () => ({ requireMembership: mocks.membership }));
 vi.mock("@/modules/users", () => ({ findUsersByIds: vi.fn() }));
 vi.mock("@/modules/gantt/repository", () => ({ findTask: mocks.task, updateTask: mocks.update, findDiagram: mocks.diagram, createTask: mocks.create }));
+import { taskSchema, updateTaskSchema } from "@/modules/gantt/schemas";
 import { moveTask, getSessionTask, addTask, editTask } from "@/modules/gantt/service";
 const teamId = "00000000-0000-4000-8000-000000000001";
 const taskId = "00000000-0000-4000-8000-000000000002";
@@ -23,11 +24,11 @@ describe("permisos del Gantt", () => {
   });
   it("impide crear una actividad en un diagrama de otro equipo", async () => {
     mocks.diagram.mockResolvedValue(undefined);
-    await expect(addTask({ teamId, diagramId: taskId, title: "Tarea", description: "", assigneeId: null, startDate: "2026-01-01", endDate: "2026-01-01", startTime: "09:00", endTime: "17:00" }, userId)).rejects.toMatchObject({ status: 404 });
+    await expect(addTask(taskSchema.parse({ teamId, diagramId: taskId, title: "Tarea", description: "", assigneeId: null, startDate: "2026-01-01", endDate: "2026-01-01", startTime: "09:00", endTime: "17:00" }), userId)).rejects.toMatchObject({ status: 404 });
     expect(mocks.create).not.toHaveBeenCalled();
   });
   it("permite al dueño conservar un exmiembro al editar, pero exige pertenencia al asignar otro", async () => {
-    const input = { teamId, taskId, diagramId: taskId, title: "Tarea", description: "", assigneeId: another, startDate: "2026-01-01", endDate: "2026-01-01", startTime: "09:00", endTime: "17:00" };
+    const input = updateTaskSchema.parse({ teamId, taskId, diagramId: taskId, title: "Tarea", description: "", assigneeId: another, startDate: "2026-01-01", endDate: "2026-01-01", startTime: "09:00", endTime: "17:00" });
     mocks.membership.mockResolvedValue({ role: "owner" });
     mocks.task.mockResolvedValue({ id: taskId, teamId, diagramId: taskId, assigneeId: another });
     await expect(editTask(input, userId)).resolves.toBeUndefined();

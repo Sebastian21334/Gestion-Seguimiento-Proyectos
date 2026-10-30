@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 const base = process.argv[2] ?? "http://127.0.0.1:3000";
 for (const route of [
   "/login",
+  "/login?invitacion=1",
   "/registro",
+  "/registro?invitacion=1",
   "/registro/correo?proveedor=gmail",
   "/olvide-contrasena",
   "/restablecer?token=invalid",
@@ -14,6 +16,8 @@ for (const route of [
   assert.equal(response.status, 200, route);
   assert.match(html, /<html lang="es-AR"/, route);
   assert.match(html, /<form|Iniciar sesión/, route);
+  if (route.includes("invitacion=1"))
+    assert.match(html, /volvé a abrir el enlace de invitación/, route);
   if (route.startsWith("/registro/correo")) {
     assert.match(html, /Revisá tu correo/);
     assert.match(html, /href="https:\/\/mail.google.com\/"/);
@@ -42,9 +46,10 @@ for (const route of [
       headers: invalidCookie ? { Cookie: "team_session=invalid" } : {},
     });
     const html = await response.text();
+    const expectedLogin = route.startsWith("/invitaciones/") ? "/login?invitacion=1" : "/login";
     const redirected =
-      response.headers.get("location") === "/login" ||
-      (html.includes("/login") &&
+      response.headers.get("location") === expectedLogin ||
+      (html.includes(expectedLogin) &&
         (html.includes("NEXT_REDIRECT") ||
           html.includes('http-equiv="refresh"')));
     assert.ok(

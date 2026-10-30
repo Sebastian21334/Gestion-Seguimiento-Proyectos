@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm } from "@/shared/ui/action-form";
-import { Avatar } from "@/shared/ui/avatar";
 import { Icon } from "@/shared/ui/icon";
 import { createDiagramAction, moveGanttTaskAction } from "../actions";
 import { TaskPanel } from "./task-panel";
+import { PhasePanel } from "./phase-panel";
+import { GanttChart } from "./gantt-chart";
+import styles from "./gantt.module.css";
 import type { Attachments, Gantt, Member, Session, Task } from "./types";
 
 const DAY = 86400000;
@@ -17,60 +19,6 @@ const todayDate = () =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   }).format(new Date());
-const fraction = (value: string) => {
-  const [hour, minute] = value.split(":").map(Number);
-  return (hour * 60 + minute) / 1440;
-};
-function statusOf(task: Task, sessions: Session[]) {
-  return task.completed
-    ? "Terminada"
-    : sessions.some((session) => session.ganttTaskId === task.id)
-      ? "En curso"
-      : "Pendiente";
-}
-function timelineTicks(first: number, count: number, scale: "day" | "week" | "month") {
-  const ticks: { current: number; offset: number; days: number }[] = [];
-  for (let offset = 0; offset < count;) {
-    const current = first + offset;
-    const date = new Date(current * DAY);
-    const nextMonth = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) / DAY;
-    const days = Math.min(count - offset, scale === "day" ? 1 : scale === "week" ? 7 : nextMonth - current);
-    ticks.push({ current, offset, days });
-    offset += days;
-  }
-  return ticks;
-}
-function MonthBands({
-  first,
-  count,
-  width,
-}: {
-  first: number;
-  count: number;
-  width: number;
-}) {
-  const months: { label: string; days: number }[] = [];
-  for (let i = 0; i < count; i++) {
-    const date = new Date((first + i) * DAY);
-    const label = date.toLocaleDateString("es-AR", {
-      timeZone: "UTC",
-      month: "long",
-      year: "numeric",
-    });
-    if (months.at(-1)?.label === label) months[months.length - 1].days++;
-    else months.push({ label, days: 1 });
-  }
-  return (
-    <div className="g2-months">
-      {months.map((month, index) => (
-        <div key={index} style={{ width: month.days * width }}>
-          {month.label}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function GanttBoard({
   teamId,
   data,
@@ -91,30 +39,18 @@ export function GanttBoard({
   const [periodDays, setPeriodDays] = useState(365);
   const [search, setSearch] = useState("");
   const [panel, setPanel] = useState<string | "new" | null>(null);
+  const [phasePanel, setPhasePanel] = useState<string | null>(null);
   const [notice, setNotice] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
   const [moving, setMoving] = useState<string | null>(null);
-  const drag = useRef<{ taskId: string; x: number; moved: boolean } | null>(
-    null,
-  );
-  const skipClick = useRef(false);
   const knownDiagrams = useRef(data.diagrams.map(diagram => diagram.id));
   const diagramMenu = useRef<HTMLDetailsElement>(null);
   const count = scale === "day" ? 60 : scale === "week" ? 140 : periodDays;
   const width = scale === "day" ? 34 : scale === "week" ? 15 : 8;
-  const step = scale === "day" ? 1 : scale === "week" ? 7 : 30;
   const first = dayNumber(start);
-  const ticks = timelineTicks(first, count, scale);
   const today = dayNumber(todayDate());
-  const visibleTasks = data.tasks.filter(
-    (task) =>
-      task.diagramId === diagramId &&
-      `${task.title} ${task.assigneeName ?? ""}`
-        .toLocaleLowerCase("es")
-        .includes(search.trim().toLocaleLowerCase("es")),
-  );
   const selected =
     panel && panel !== "new"
       ? data.tasks.find(
@@ -132,7 +68,9 @@ export function GanttBoard({
   function selectDiagram(value: string) {
     setDiagramId(value);
     setPanel(null);
+    setPhasePanel(null);
   }
+  function openTask(id: string) { setPhasePanel(null); setPanel(id); }
   async function move(task: Task, delta: number) {
     setMoving(task.id);
     setNotice(null);
@@ -155,7 +93,7 @@ export function GanttBoard({
     }
   }
   return (
-    <section className="g2-page">
+    <section className={`g2-page ${styles.page}`}>
       <div className="g2-heading">
         <div>
           <span className="g2-eyebrow">PLANIFICACIÓN DEL EQUIPO</span>
@@ -268,10 +206,11 @@ export function GanttBoard({
             <button
               type="button"
               className="g2-primary"
-              onClick={() => setPanel("new")}
+              onClick={() => openTask("new")}
             >
               <Icon name="plus" size={17} /> Nueva tarea
             </button>
+            <button type="button" className="g2-secondary" onClick={() => { setPanel(null); setPhasePanel("new"); }}><Icon name="plus" size={16} /> Nueva fase</button>
             <div className="g2-navigate">
               <button
                 type="button"
@@ -295,233 +234,18 @@ export function GanttBoard({
               {notice.message}
             </p>
           )}
-          <div className={`g2-workspace ${panel ? "with-panel" : ""}`}>
-            <div className="g2-chart-card">
-              <div
-                className="g2-scroll"
-                aria-label="Diagrama de Gantt desplazable horizontalmente"
-              >
-                <div className="g2-grid" style={{ width: 410 + count * width }}>
-                  <div className="g2-header-row">
-                    <div className="g2-fixed g2-column-head">
-                      <span>Actividad</span>
-                      <span>Responsable</span>
-                      <span>Estado</span>
-                    </div>
-                    <div
-                      className="g2-timeline-header"
-                      style={{ width: count * width }}
-                    >
-                      <MonthBands first={first} count={count} width={width} />
-                      <div className="g2-date-ticks">
-                        {ticks.map(
-                          ({ current, days }, index) => {
-                            const date = new Date(current * DAY);
-                            return (
-                              <div
-                                key={index}
-                                className={
-                                  today >= current && today < current + days
-                                    ? "today"
-                                    : ""
-                                }
-                                style={{
-                                  width: days * width,
-                                }}
-                              >
-                                <strong>
-                                  {date.toLocaleDateString("es-AR", {
-                                    timeZone: "UTC",
-                                    day: "2-digit",
-                                    ...(scale !== "day"
-                                      ? { month: "short" }
-                                      : {}),
-                                  })}
-                                </strong>
-                                {scale === "day" && (
-                                  <span>
-                                    {date.toLocaleDateString("es-AR", {
-                                      timeZone: "UTC",
-                                      weekday: "short",
-                                    })}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          },
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {visibleTasks.map((task) => {
-                    const status = statusOf(task, sessions);
-                    const begin = dayNumber(task.startDate);
-                    const end = dayNumber(task.endDate);
-                    const left = Math.max(
-                      0,
-                      begin + fraction(task.startTime) - first,
-                    );
-                    const right = Math.min(
-                      count,
-                      end + fraction(task.endTime) - first,
-                    );
-                    const selectedRow = panel === task.id;
-                    return (
-                      <div
-                        className={`g2-row ${selectedRow ? "selected" : ""}`}
-                        key={task.id}
-                      >
-                        <div className="g2-fixed g2-cells">
-                          <button
-                            type="button"
-                            className="g2-task-name"
-                            title={task.title}
-                            onClick={() => setPanel(task.id)}
-                          >
-                            <span
-                              className={`g2-task-dot ${status === "Terminada" ? "done" : status === "En curso" ? "active" : "pending"}`}
-                            />
-                            <span>{task.title}</span>
-                          </button>
-                          <div className="g2-person">
-                            {task.assigneeName ? (
-                              <>
-                                <Avatar
-                                  name={task.assigneeName}
-                                  githubUsername={task.assigneeGithubUsername}
-                                />
-                                <span title={task.assigneeName}>
-                                  {task.assigneeName}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="g2-unassigned">Sin asignar</span>
-                            )}
-                          </div>
-                          <div>
-                            <span
-                              className={`g2-badge ${status === "Terminada" ? "done" : status === "En curso" ? "active" : "pending"}`}
-                            >
-                              {status}
-                            </span>
-                          </div>
-                        </div>
-                        <div
-                          className="g2-track"
-                          style={{
-                            width: count * width,
-                            backgroundSize: `${width * step}px 100%`,
-                            backgroundImage: scale === "month" ? "none" : undefined,
-                          }}
-                        >
-                          {scale === "month" && ticks.slice(1).map(tick => <span key={tick.offset} className="g2-month-line" style={{ left: tick.offset * width }} />)}
-                          {today >= first && today < first + count && (
-                            <span
-                              className="g2-today-line"
-                              style={{ left: (today - first) * width, width }}
-                            />
-                          )}
-                          {right > left && (
-                            <button
-                              type="button"
-                              className={`g2-bar ${selectedRow ? "selected" : ""} ${status === "Terminada" ? "done" : status === "En curso" ? "active" : "pending"} ${task.canEdit ? "movable" : ""}`}
-                              title={`${task.title}: ${task.startDate} ${task.startTime} – ${task.endDate} ${task.endTime}${task.canEdit ? " · Arrastrá para mover" : ""}`}
-                              aria-label={`Abrir ${task.title}. ${task.startDate} a ${task.endDate}.`}
-                              disabled={moving === task.id}
-                              style={{
-                                left: left * width,
-                                width: Math.max(12, (right - left) * width),
-                              }}
-                              onPointerDown={(event) => {
-                                if (!task.canEdit) return;
-                                drag.current = {
-                                  taskId: task.id,
-                                  x: event.clientX,
-                                  moved: false,
-                                };
-                                event.currentTarget.setPointerCapture(
-                                  event.pointerId,
-                                );
-                              }}
-                              onPointerMove={(event) => {
-                                if (drag.current?.taskId !== task.id) return;
-                                const delta = event.clientX - drag.current.x;
-                                if (Math.abs(delta) > 4)
-                                  drag.current.moved = true;
-                                event.currentTarget.style.transform = `translateX(${delta}px)`;
-                              }}
-                              onPointerCancel={(event) => {
-                                drag.current = null;
-                                event.currentTarget.style.transform = "";
-                              }}
-                              onPointerUp={(event) => {
-                                event.currentTarget.style.transform = "";
-                                const current = drag.current;
-                                drag.current = null;
-                                if (
-                                  !current ||
-                                  current.taskId !== task.id ||
-                                  !current.moved
-                                )
-                                  return;
-                                skipClick.current = true;
-                                const delta = Math.round(
-                                  (event.clientX - current.x) / width,
-                                );
-                                if (delta) void move(task, delta);
-                              }}
-                              onClick={() => {
-                                if (skipClick.current) {
-                                  skipClick.current = false;
-                                  return;
-                                }
-                                setPanel(task.id);
-                              }}
-                            >
-                              <span>{task.title}</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {!visibleTasks.length && (
-                    <div className="g2-chart-empty">
-                      {search
-                        ? "No hay actividades que coincidan con la búsqueda."
-                        : "Todavía no hay actividades. Creá la primera con «Nueva tarea»."}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="g2-chart-footer">
-                <span>
-                  <span className="g2-legend-dot active" />
-                  En curso
-                </span>
-                <span>
-                  <span className="g2-legend-dot done" />
-                  Terminada
-                </span>
-                <span>
-                  <span className="g2-legend-dot pending" />
-                  Pendiente
-                </span>
-                <p>
-                  Seleccioná una actividad para ver sus detalles
-                  {visibleTasks.some((task) => task.canEdit)
-                    ? " o arrastrá una barra para moverla"
-                    : ""}
-                  .
-                </p>
-              </div>
-            </div>
+          <div className={`g2-workspace ${panel || phasePanel ? "with-panel" : ""}`}>
+            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} width={width} scale={scale} today={today} selectedId={panel} moving={moving} sessions={sessions} onSelect={openTask} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
+            {phasePanel && <PhasePanel key={phasePanel} teamId={teamId} diagramId={diagramId} phase={data.phases.find(phase => phase.id === phasePanel)} onClose={() => setPhasePanel(null)} onSaved={() => { setPhasePanel(null); refresh(); }} />}
             {panel && (panel === "new" || selected) && (
               <TaskPanel
                 key={panel}
                 teamId={teamId}
                 diagramId={diagramId}
                 task={selected}
+                phases={data.phases.filter(phase => phase.diagramId === diagramId)}
+                tasks={data.tasks.filter(task => task.diagramId === diagramId)}
+                comments={data.comments.filter(comment => comment.taskId === selected?.id)}
                 members={members}
                 sessions={sessions}
                 attachments={attachments}

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireCurrentUser } from "@/shared/session";
+import { getCurrentUser, requireCurrentUser } from "@/shared/session";
 import { runAction } from "@/shared/errors/action";
 import type { ActionState } from "@/shared/ui/action-state";
 import * as service from "./service";
@@ -23,7 +23,8 @@ export async function teamInvitationsAction(teamId: unknown) {
   );
 }
 export async function invitationPageAction(token: unknown) {
-  const user = await requireCurrentUser();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?invitacion=1");
   let invitation:
     | Awaited<ReturnType<typeof service.invitationPreview>>
     | undefined;

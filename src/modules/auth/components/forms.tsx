@@ -40,9 +40,16 @@ function PasswordField({ newPassword = false }: { newPassword?: boolean }) {
     </label>
   );
 }
-export function LoginForm({ reset = false }: { reset?: boolean }) {
+export function LoginForm({ reset = false, invitation = false }: { reset?: boolean; invitation?: boolean }) {
   return (
     <>
+      {invitation && (
+        <p className="notice notice-warning" role="status">
+          Para aceptar la invitación, iniciá sesión o{" "}
+          <Link href="/registro?invitacion=1" className="text-link">creá una cuenta</Link>{" "}
+          con el correo al que te invitaron. Después, volvé a abrir el enlace de invitación.
+        </p>
+      )}
       {reset && (
         <p className="notice notice-success" role="status">
           Contraseña actualizada. Iniciá sesión nuevamente.
@@ -60,7 +67,7 @@ export function LoginForm({ reset = false }: { reset?: boolean }) {
         </Link>
       </ActionForm>
       <p className="auth-switch">
-        ¿Primera vez por acá? <Link href="/registro">Creá tu cuenta</Link>
+        ¿Primera vez por acá? <Link href={invitation ? "/registro?invitacion=1" : "/registro"}>Creá tu cuenta</Link>
       </p>
       <details className="resend-details">
         <summary>¿Todavía no verificaste tu correo?</summary>
@@ -72,9 +79,15 @@ export function LoginForm({ reset = false }: { reset?: boolean }) {
     </>
   );
 }
-export function RegisterForm() {
+export function RegisterForm({ invitation = false }: { invitation?: boolean }) {
   return (
     <>
+      {invitation && (
+        <p className="notice notice-warning" role="status">
+          Registrate con el correo al que te invitaron y verificá tu cuenta.
+          Después, iniciá sesión y volvé a abrir el enlace de invitación.
+        </p>
+      )}
       <ActionForm
         action={registerAction}
         submitLabel="Crear mi cuenta"
@@ -98,7 +111,7 @@ export function RegisterForm() {
         </span>
       </ActionForm>
       <p className="auth-switch">
-        ¿Ya tenés cuenta? <Link href="/login">Iniciá sesión</Link>
+        ¿Ya tenés cuenta? <Link href={invitation ? "/login?invitacion=1" : "/login"}>Iniciá sesión</Link>
       </p>
     </>
   );

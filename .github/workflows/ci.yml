@@ -1,0 +1,29 @@
+name: Comprobaciones
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost/ci
+      APP_URL: https://equipo.example.invalid
+      ACS_CONNECTION_STRING: endpoint=https://example.communication.azure.com/;accesskey=dGVzdA==
+      ACS_SENDER_ADDRESS: ci@example.test
+      SESSION_SECRET: ci-only-session-secret-at-least-32-characters
+      EMAIL_TOKEN_SECRET: ci-only-email-secret-distinct-at-least-32-characters
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build

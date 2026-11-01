@@ -17,8 +17,9 @@ export const statusLabels = { pending: "Pendiente", active: "En curso", done: "C
 const ROW_HEIGHT = 44;
 type Row = { kind: "phase"; phase: Phase } | { kind: "task"; task: Task };
 
-export function GanttChart({ data, diagramId, search, first, count, scale, today, selectedId, moving, sessions, onSelect, onEditPhase, onMove }: {
+export function GanttChart({ data, diagramId, search, first, count, focusDay, focusVersion, scale, today, selectedId, moving, sessions, onSelect, onEditPhase, onMove }: {
   data: Gantt; diagramId: string; search: string; first: number; count: number;
+  focusDay: number; focusVersion: number;
   scale: "day" | "week" | "month"; today: number; selectedId: string | null; moving: string | null;
   sessions: Session[]; onSelect: (id: string) => void; onEditPhase: (id: string) => void; onMove: (task: Task, days: number) => void;
 }) {
@@ -41,8 +42,9 @@ export function GanttChart({ data, diagramId, search, first, count, scale, today
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    if (viewport.current) viewport.current.scrollLeft = 0;
-  }, [first, scale, diagramId]);
+    if (viewport.current)
+      viewport.current.scrollLeft = (focusDay - first) * width;
+  }, [first, focusDay, focusVersion, scale, diagramId, width]);
   const drag = useRef<{ id: string; x: number; moved: boolean } | null>(null);
   const skipClick = useRef(false);
   const markerId = `dependency-${useId().replace(/:/g, "")}`;

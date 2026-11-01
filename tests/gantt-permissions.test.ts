@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ membership: vi.fn(), task: vi.fn(), update: vi.fn(), diagram: vi.fn(), create: vi.fn(), activate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ membership: vi.fn(), task: vi.fn(), update: vi.fn(), diagram: vi.fn(), create: vi.fn(), activate: vi.fn(), remove: vi.fn() }));
 vi.mock("@/modules/teams", () => ({ requireMembership: mocks.membership }));
 vi.mock("@/modules/users", () => ({ findUsersByIds: vi.fn() }));
-vi.mock("@/modules/gantt/repository", () => ({ findTask: mocks.task, updateTask: mocks.update, findDiagram: mocks.diagram, createTask: mocks.create, activatePendingTask: mocks.activate }));
+vi.mock("@/modules/gantt/repository", () => ({ findTask: mocks.task, updateTask: mocks.update, findDiagram: mocks.diagram, createTask: mocks.create, activatePendingTask: mocks.activate, deleteTask: mocks.remove }));
 import { taskSchema, updateTaskSchema } from "@/modules/gantt/schemas";
-import { moveTask, getSessionTask, startSessionTask, addTask, editTask } from "@/modules/gantt/service";
+import { moveTask, getSessionTask, startSessionTask, addTask, editTask, removeTask } from "@/modules/gantt/service";
 const teamId = "00000000-0000-4000-8000-000000000001";
 const taskId = "00000000-0000-4000-8000-000000000002";
 const userId = "00000000-0000-4000-8000-000000000003";
@@ -28,6 +28,35 @@ describe("permisos del Gantt", () => {
       mocks.membership.mockResolvedValue({ role }); mocks.task.mockResolvedValue({ id: taskId, teamId, assigneeId, completed: false });
       await expect(moveTask({ teamId, taskId, startDate: "2026-01-01", endDate: "2026-01-02" }, userId)).resolves.toBeUndefined();
     }
+  });
+  it("permite eliminar tareas propias, sin responsable o al dueño del equipo", async () => {
+    mocks.remove.mockResolvedValue({ id: taskId });
+    for (const [role, assigneeId] of [["member", null], ["member", userId], ["owner", another]] as const) {
+      mocks.membership.mockResolvedValue({ role });
+      mocks.task.mockResolvedValue({ id: taskId, teamId, assigneeId });
+      await expect(removeTask(teamId, taskId, userId)).resolves.toBeUndefined();
+      expect(mocks.remove).toHaveBeenLastCalledWith(teamId, taskId, userId, role === "owner");
+    }
+  });
+  it("rechaza eliminar una tarea asignada a otra persona", async () => {
+    await expect(removeTask(teamId, taskId, userId)).rejects.toMatchObject({ status: 403 });
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+  it("exige pertenencia al equipo antes de buscar o eliminar una tarea", async () => {
+    mocks.membership.mockRejectedValueOnce(new Error("No sos miembro de este equipo."));
+    await expect(removeTask(teamId, taskId, userId)).rejects.toThrow("No sos miembro");
+    expect(mocks.task).not.toHaveBeenCalled();
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+  it("no elimina una tarea inexistente o de otro equipo", async () => {
+    mocks.task.mockResolvedValue(undefined);
+    await expect(removeTask(teamId, taskId, userId)).rejects.toMatchObject({ status: 404 });
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
+  it("informa el rechazo si los permisos cambian antes de completar la eliminación", async () => {
+    mocks.task.mockResolvedValue({ id: taskId, teamId, assigneeId: userId });
+    mocks.remove.mockResolvedValue(undefined);
+    await expect(removeTask(teamId, taskId, userId)).rejects.toMatchObject({ status: 403 });
   });
   it("impide crear una actividad en un diagrama de otro equipo", async () => {
     mocks.diagram.mockResolvedValue(undefined);

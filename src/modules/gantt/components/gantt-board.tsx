@@ -35,6 +35,7 @@ export function GanttBoard({
   const router = useRouter();
   const [diagramId, setDiagramId] = useState(data.diagrams[0]?.id ?? "");
   const [start, setStart] = useState(todayDate);
+  const [focusVersion, setFocusVersion] = useState(0);
   const [scale, setScale] = useState<"day" | "week" | "month">("day");
   const [periodDays, setPeriodDays] = useState(365);
   const [search, setSearch] = useState("");
@@ -49,7 +50,9 @@ export function GanttBoard({
   const diagramMenu = useRef<HTMLDetailsElement>(null);
   const count = scale === "day" ? 60 : scale === "week" ? 140 : periodDays;
   const navigationDays = scale === "day" ? 7 : Math.floor(count / 2);
-  const first = dayNumber(start);
+  const focusDay = dayNumber(start);
+  // Dejar espacio antes de la fecha elegida para poder desplazarse al pasado.
+  const first = focusDay - Math.floor(count / 2);
   const today = dayNumber(todayDate());
   const selected =
     panel && panel !== "new"
@@ -142,7 +145,7 @@ export function GanttBoard({
               </select>
             </label>
             <label>
-              Ver desde
+              Ir a fecha
               <input
                 type="date"
                 value={start}
@@ -214,13 +217,22 @@ export function GanttBoard({
             <div className="g2-navigate">
               <button
                 type="button"
-                onClick={() => setStart(asDate(first - navigationDays))}
+                onClick={() => setStart(asDate(focusDay - navigationDays))}
               >
                 ← <span>Anterior</span>
               </button>
               <button
                 type="button"
-                onClick={() => setStart(asDate(first + navigationDays))}
+                onClick={() => {
+                  setStart(todayDate());
+                  setFocusVersion((version) => version + 1);
+                }}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={() => setStart(asDate(focusDay + navigationDays))}
               >
                 <span>Siguiente</span> →
               </button>
@@ -235,7 +247,7 @@ export function GanttBoard({
             </p>
           )}
           <div className={`g2-workspace ${panel || phasePanel ? "with-panel" : ""}`}>
-            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} scale={scale} today={today} selectedId={panel} moving={moving} sessions={sessions} onSelect={openTask} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
+            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} focusDay={focusDay} focusVersion={focusVersion} scale={scale} today={today} selectedId={panel} moving={moving} sessions={sessions} onSelect={openTask} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
             {phasePanel && <PhasePanel key={phasePanel} teamId={teamId} diagramId={diagramId} phase={data.phases.find(phase => phase.id === phasePanel)} onClose={() => setPhasePanel(null)} onSaved={() => { setPhasePanel(null); refresh(); }} />}
             {panel && (panel === "new" || selected) && (
               <TaskPanel

@@ -53,32 +53,32 @@ export function TaskPanel({ teamId, diagramId, task, tasks, phases, comments, me
 }) {
   const [tab, setTab] = useState<"details" | "comments" | "files" | "work">("details");
   const [newStartDate, setNewStartDate] = useState(todayDate);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
   const related = sessions.filter(session => session.ganttTaskId === task?.id);
   const files = related.filter(session => session.reports.length);
   const phase = phases.find(phase => phase.id === task?.phaseId);
   const status = task ? taskStatus(task) : "pending";
-  async function remove() {
-    if (!task || !window.confirm("¿Eliminar esta tarea? Se eliminarán sus dependencias y comentarios. Las sesiones de trabajo se conservarán sin asociación al Gantt.")) return;
-    setDeleting(true); setDeleteError("");
-    const form = new FormData(); form.set("teamId", teamId); form.set("taskId", task.id);
-    try {
-      const result = await deleteGanttTaskAction({ success: false, message: "" }, form);
-      if (result.success) { onClose(); onSaved(); } else setDeleteError(result.message);
-    } catch { setDeleteError("No pudimos eliminar la tarea. Intentá nuevamente."); }
-    finally { setDeleting(false); }
-  }
   const fields = <Fields members={members} task={task} tasks={tasks} phases={phases} sessions={sessions} disabled={!!task && !task.canEdit} onStartDateChange={setNewStartDate} />;
   return <aside className="g2-panel" aria-label={task ? `Detalles de ${task.title}` : "Nueva tarea"}>
     <header className="g2-panel-top"><div><span className="g2-panel-kicker"><span className={`g2-task-dot ${status}`} />{phase?.name ?? "ACTIVIDAD DEL DIAGRAMA"}</span><h2>{task?.title ?? "Nueva tarea"}</h2></div><button type="button" className="g2-icon-button" onClick={onClose} aria-label="Cerrar panel"><Icon name="close" /></button></header>
+    {task?.canEdit && <div className={styles.taskActions}>
+      <ActionForm
+        action={deleteGanttTaskAction}
+        submitLabel="Eliminar tarea"
+        pendingLabel="Eliminando…"
+        variant="danger"
+        confirmMessage={`¿Eliminar la tarea “${task.title}”? Se eliminarán sus dependencias y comentarios. Las sesiones de trabajo y sus archivos se conservarán sin asociación al Gantt.`}
+        onSuccess={() => { onClose(); onSaved(); }}
+      >
+        <input type="hidden" name="teamId" value={teamId} />
+        <input type="hidden" name="taskId" value={task.id} />
+      </ActionForm>
+    </div>}
     {task && <div className="g2-panel-tabs" role="group" aria-label="Información de la tarea">{([["details", "Detalles"], ["comments", "Comentarios"], ["files", "Archivos"], ["work", "Actividad"]] as const).map(([value, label]) => <button type="button" key={value} aria-pressed={tab === value} className={tab === value ? "selected" : ""} onClick={() => setTab(value)}>{label}</button>)}</div>}
     <div className="g2-panel-content">
       {tab === "details" && <>
-        {task && !task.canEdit ? <>{fields}<p className="g2-permission">Solo el responsable o el dueño pueden modificar esta actividad.</p></> : <ActionForm key={task ? `${task.id}:${task.status}:${task.progress}:${task.phaseId}:${task.dependencyIds.join(",")}` : "new"} className={`form-stack ${styles.taskForm}`} action={task ? editGanttTaskAction : createGanttTaskAction} submitLabel={task ? "Guardar cambios" : "Crear tarea"} pendingLabel="Guardando…" onSuccess={() => onSaved(task ? undefined : newStartDate)} footerActions={<>{task && <button type="button" className={styles.deleteButton} disabled={deleting} onClick={() => { void remove(); }}><Icon name="delete" size={15} />{deleting ? "Eliminando…" : "Eliminar"}</button>}<button type="button" className="button button-secondary" onClick={onClose}>Cancelar</button></>}>
+        {task && !task.canEdit ? <>{fields}<p className="g2-permission">Solo el responsable o el dueño pueden modificar esta actividad.</p></> : <ActionForm key={task ? `${task.id}:${task.status}:${task.progress}:${task.phaseId}:${task.dependencyIds.join(",")}` : "new"} className={`form-stack ${styles.taskForm}`} action={task ? editGanttTaskAction : createGanttTaskAction} submitLabel={task ? "Guardar cambios" : "Crear tarea"} pendingLabel="Guardando…" onSuccess={() => onSaved(task ? undefined : newStartDate)} footerActions={<button type="button" className="button button-secondary" onClick={onClose}>Cancelar</button>}>
           <input type="hidden" name="teamId" value={teamId} /><input type="hidden" name="diagramId" value={diagramId} />{task && <input type="hidden" name="taskId" value={task.id} />}{fields}
         </ActionForm>}
-        {deleteError && <p className="notice notice-error" role="alert">{deleteError}</p>}
         {task && <p className={styles.creator}>Creada por {task.creatorName}</p>}
       </>}
       {tab === "comments" && task && <div className={styles.comments}>

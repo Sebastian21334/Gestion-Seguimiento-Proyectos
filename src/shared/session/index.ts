@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { z } from "zod";
@@ -31,7 +32,7 @@ export async function readSessionClaims(token: string) {
 }
 // Infraestructura compartida de la petición: evita dependencias de teams, users,
 // invitations, documents y work-sessions hacia el módulo auth.
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   let claims;
@@ -43,7 +44,7 @@ export async function getCurrentUser() {
   const user = await findUserById(claims.sub);
   if (!user?.emailVerifiedAt || user.tokenVersion !== claims.tv) return null;
   return publicCurrentUser(user);
-}
+});
 export async function requireCurrentUser() {
   const user = await getCurrentUser();
   if (!user) throw new UnauthorizedError();

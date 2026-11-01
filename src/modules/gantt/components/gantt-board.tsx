@@ -34,7 +34,7 @@ export function GanttBoard({
 }) {
   const router = useRouter();
   const [diagramId, setDiagramId] = useState(data.diagrams[0]?.id ?? "");
-  const [start, setStart] = useState(() => asDate(dayNumber(todayDate()) - 7));
+  const [start, setStart] = useState(todayDate);
   const [scale, setScale] = useState<"day" | "week" | "month">("day");
   const [periodDays, setPeriodDays] = useState(365);
   const [search, setSearch] = useState("");
@@ -48,7 +48,7 @@ export function GanttBoard({
   const knownDiagrams = useRef(data.diagrams.map(diagram => diagram.id));
   const diagramMenu = useRef<HTMLDetailsElement>(null);
   const count = scale === "day" ? 60 : scale === "week" ? 140 : periodDays;
-  const width = scale === "day" ? 34 : scale === "week" ? 15 : 8;
+  const navigationDays = scale === "day" ? 7 : Math.floor(count / 2);
   const first = dayNumber(start);
   const today = dayNumber(todayDate());
   const selected =
@@ -214,13 +214,13 @@ export function GanttBoard({
             <div className="g2-navigate">
               <button
                 type="button"
-                onClick={() => setStart(asDate(first - Math.floor(count / 2)))}
+                onClick={() => setStart(asDate(first - navigationDays))}
               >
                 ← <span>Anterior</span>
               </button>
               <button
                 type="button"
-                onClick={() => setStart(asDate(first + Math.floor(count / 2)))}
+                onClick={() => setStart(asDate(first + navigationDays))}
               >
                 <span>Siguiente</span> →
               </button>
@@ -235,7 +235,7 @@ export function GanttBoard({
             </p>
           )}
           <div className={`g2-workspace ${panel || phasePanel ? "with-panel" : ""}`}>
-            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} width={width} scale={scale} today={today} selectedId={panel} moving={moving} sessions={sessions} onSelect={openTask} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
+            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} scale={scale} today={today} selectedId={panel} moving={moving} sessions={sessions} onSelect={openTask} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
             {phasePanel && <PhasePanel key={phasePanel} teamId={teamId} diagramId={diagramId} phase={data.phases.find(phase => phase.id === phasePanel)} onClose={() => setPhasePanel(null)} onSaved={() => { setPhasePanel(null); refresh(); }} />}
             {panel && (panel === "new" || selected) && (
               <TaskPanel

@@ -234,6 +234,19 @@ img {
   display: flex;
   flex-direction: column;
 }
+.workspace.sidebar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+.workspace .sidebar[hidden] {
+  display: none;
+}
+.sidebar-toggle {
+  flex-shrink: 0;
+}
+.topbar .team-selector {
+  margin-right: auto;
+  min-width: 0;
+}
 .topbar {
   height: 82px;
   background: #fff;

@@ -4,20 +4,16 @@ import { myTeamsAction } from "@/modules/teams/actions";
 import { Avatar } from "@/shared/ui/avatar";
 import { Icon } from "@/shared/ui/icon";
 import { WorkspaceLinks, TeamSelector } from "@/shared/ui/navigation";
+import { WorkspaceFrame } from "@/shared/ui/workspace-frame";
 
 export async function WorkspaceShell({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await authenticatedPageAction();
-  const teams = await myTeamsAction();
+  const [user, teams] = await Promise.all([authenticatedPageAction(), myTeamsAction()]);
   return (
-    <div className="workspace">
-      <a className="skip-link" href="#contenido">
-        Ir al contenido
-      </a>
-      <aside className="sidebar">
+    <WorkspaceFrame sidebar={<>
         <Link href="/" className="brand">
           <span className="brand-mark">
             <Icon name="code" size={22} />
@@ -51,9 +47,7 @@ export async function WorkspaceShell({
             <span>Un paso a la vez.</span>
           </p>
         </div>
-      </aside>
-      <div className="workspace-body">
-        <header className="topbar">
+      </>} header={<>
           <TeamSelector teams={teams} />
           <div className="topbar-user">
             <Link href="/perfil">
@@ -71,14 +65,8 @@ export async function WorkspaceShell({
               </button>
             </form>
           </div>
-        </header>
-        <main id="contenido" className="main-content">
-          {children}
-        </main>
-        <footer className="workspace-footer">
-          Un mismo equipo. Un mismo rumbo.
-        </footer>
-      </div>
-    </div>
+      </>}>
+      {children}
+    </WorkspaceFrame>
   );
 }

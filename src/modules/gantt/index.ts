@@ -1,1 +1,1 @@
-export { getGantt, getTasksByIds, getSessionTask } from "./service";
+export { getGantt, getTasksByIds, getSessionTask, startSessionTask } from "./service";

@@ -20,6 +20,7 @@ const paths = {
   code: "m8 7-5 5 5 5 M16 7l5 5-5 5 M14 4l-4 16",
   mail: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2 M22 6l-10 7L2 6",
   search: "M21 21l-4.3-4.3 M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
+  sidebar: "M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1 M9 3v18",
 } as const;
 export function Icon({
   name,

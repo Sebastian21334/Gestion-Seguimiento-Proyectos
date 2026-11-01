@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Avatar } from "@/shared/ui/avatar";
 import { Icon } from "@/shared/ui/icon";
@@ -17,12 +17,32 @@ export const statusLabels = { pending: "Pendiente", active: "En curso", done: "C
 const ROW_HEIGHT = 44;
 type Row = { kind: "phase"; phase: Phase } | { kind: "task"; task: Task };
 
-export function GanttChart({ data, diagramId, search, first, count, width, scale, today, selectedId, moving, sessions, onSelect, onEditPhase, onMove }: {
-  data: Gantt; diagramId: string; search: string; first: number; count: number; width: number;
+export function GanttChart({ data, diagramId, search, first, count, scale, today, selectedId, moving, sessions, onSelect, onEditPhase, onMove }: {
+  data: Gantt; diagramId: string; search: string; first: number; count: number;
   scale: "day" | "week" | "month"; today: number; selectedId: string | null; moving: string | null;
   sessions: Session[]; onSelect: (id: string) => void; onEditPhase: (id: string) => void; onMove: (task: Task, days: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const viewport = useRef<HTMLDivElement>(null);
+  const grid = useRef<HTMLDivElement>(null);
+  const [dayWidth, setDayWidth] = useState(80);
+  const width = scale === "day" ? dayWidth : scale === "week" ? 15 : 8;
+  useEffect(() => {
+    const element = viewport.current;
+    const content = grid.current;
+    if (!element || !content) return;
+    const resize = () => {
+      const fixedWidth = parseFloat(getComputedStyle(content).getPropertyValue("--gantt-fixed"));
+      setDayWidth(Math.max(48, (element.clientWidth - fixedWidth) / 7));
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (viewport.current) viewport.current.scrollLeft = 0;
+  }, [first, scale, diagramId]);
   const drag = useRef<{ id: string; x: number; moved: boolean } | null>(null);
   const skipClick = useRef(false);
   const markerId = `dependency-${useId().replace(/:/g, "")}`;
@@ -59,8 +79,8 @@ export function GanttChart({ data, diagramId, search, first, count, width, scale
   return (
     <div className={styles.chartShell}>
       <div className="g2-chart-card">
-        <div className="g2-scroll" aria-label="Diagrama de Gantt desplazable horizontalmente" tabIndex={0}>
-          <div className={`g2-grid ${styles.chartGrid}`} style={{ width: `calc(var(--gantt-fixed) + ${count * width}px)` }}>
+        <div ref={viewport} className="g2-scroll" aria-label="Diagrama de Gantt desplazable horizontalmente" tabIndex={0}>
+          <div ref={grid} className={`g2-grid ${styles.chartGrid}`} style={{ width: `calc(var(--gantt-fixed) + ${count * width}px)` }}>
             <div className="g2-header-row">
               <div className="g2-fixed g2-column-head"><span>Tarea</span><span>Responsable</span><span>Estado</span><span>Progreso</span></div>
               <div className="g2-timeline-header" style={{ width: count * width }}>

@@ -4,7 +4,7 @@ import { findUsersByIds } from "@/modules/users";
 import * as repository from "./repository";
 import { NotFoundError, ValidationError } from "@/shared/errors";
 import type { MarkdownReport } from "./schemas";
-import { getGantt, getSessionTask } from "@/modules/gantt";
+import { getGantt, getSessionTask, startSessionTask } from "@/modules/gantt";
 
 export function matchingTitle(left: string, right: string) {
   return (
@@ -46,9 +46,10 @@ export async function getBoard(teamId: string, userId: string) {
     repository.history(teamId),
     getGantt(teamId, userId),
   ]);
+  const sessions = await withProfiles([...active, ...history], gantt);
   return {
-    active: await withProfiles(active, gantt),
-    history: await withProfiles(history, gantt),
+    active: sessions.slice(0, active.length),
+    history: sessions.slice(active.length),
     gantt,
   };
 }
@@ -71,6 +72,7 @@ export async function startSession(
     throw new ValidationError(
       "Primero cerrá tu tarea activa antes de empezar otra.",
     );
+  await startSessionTask(data.teamId, data.ganttTaskId, userId);
   const active = await repository.active(data.teamId);
   return {
     collision: active.some(

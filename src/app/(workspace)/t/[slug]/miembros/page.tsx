@@ -17,9 +17,10 @@ export default async function MembersPage({
     teamPageAction(slug),
     authenticatedPageAction(),
   ]);
-  const members = await membersPageAction(team.id);
-  const invitations =
-    team.role === "owner" ? await teamInvitationsAction(team.id) : [];
+  const [members, invitations] = await Promise.all([
+    membersPageAction(team.id),
+    team.role === "owner" ? teamInvitationsAction(team.id) : Promise.resolve([]),
+  ]);
   return (
     <div className="board-layout">
       <div className="list-stack">

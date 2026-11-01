@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { requireMembership } from "@/modules/teams";
 import { findUsersByIds } from "@/modules/users";
 import {
@@ -11,7 +12,7 @@ import type { z } from "zod";
 import type { commentSchema, phaseSchema, taskSchema, updatePhaseSchema, updateTaskSchema } from "./schemas";
 import { summarizePhase } from "./planning";
 
-export async function getGantt(teamId: string, userId: string) {
+export const getGantt = cache(async (teamId: string, userId: string) => {
   const member = await requireMembership(teamId, userId);
   const [diagrams, tasks, phases, dependencies, comments] = await Promise.all([
     repository.diagrams(teamId),
@@ -49,7 +50,7 @@ export async function getGantt(teamId: string, userId: string) {
         task.assigneeId === userId,
     })),
   };
-}
+});
 export async function getTasksByIds(
   teamId: string,
   userId: string,
@@ -71,6 +72,11 @@ export async function getSessionTask(
   if (task.assigneeId && task.assigneeId !== userId)
     throw new ForbiddenError("Esta tarea está asignada a otra persona.");
   return task;
+}
+export async function startSessionTask(teamId: string, taskId: string, userId: string) {
+  await requireMembership(teamId, userId);
+  // Solo cambia Pendiente: conserva el progreso y cualquier cierre concurrente.
+  await repository.activatePendingTask(teamId, taskId, userId);
 }
 export async function addDiagram(teamId: string, name: string, userId: string) {
   await requireMembership(teamId, userId);

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { findUserContactsByIds } from "@/modules/users";
 import {
   ForbiddenError,
@@ -24,14 +25,14 @@ export async function getTeam(teamId: string, userId: string) {
   if (!team) throw new NotFoundError();
   return team;
 }
-export async function getTeamBySlug(slug: string, userId: string) {
+export const getTeamBySlug = cache(async (slug: string, userId: string) => {
   const reference = await repository.findIdBySlug(slug);
   if (!reference) throw new NotFoundError();
   const member = await requireMembership(reference.id, userId);
   const team = await repository.findById(reference.id);
   if (!team) throw new NotFoundError();
   return { ...team, role: member.role };
-}
+});
 export async function listMyTeams(userId: string) {
   const memberships = await repository.memberships(userId);
   await Promise.all(

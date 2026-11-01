@@ -69,6 +69,18 @@ export async function findTask(teamId: string, id: string) {
       .limit(1)
   )[0];
 }
+export async function activatePendingTask(teamId: string, id: string, userId: string) {
+  return db
+    .update(ganttTasks)
+    .set({ status: "active" })
+    .where(and(
+      eq(ganttTasks.teamId, teamId),
+      eq(ganttTasks.id, id),
+      eq(ganttTasks.status, "pending"),
+      eq(ganttTasks.completed, false),
+      or(isNull(ganttTasks.assigneeId), eq(ganttTasks.assigneeId, userId)),
+    ));
+}
 export async function findTasks(teamId: string, ids: string[]) {
   return ids.length
     ? db

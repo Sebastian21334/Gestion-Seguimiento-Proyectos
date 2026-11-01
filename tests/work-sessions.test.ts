@@ -15,12 +15,15 @@ const mocks = vi.hoisted(() => ({
   findReport: vi.fn(),
   saveReport: vi.fn(),
   listReports: vi.fn(),
+  getSessionTask: vi.fn(),
+  startSessionTask: vi.fn(),
 }));
 vi.mock("@/modules/teams", () => ({ requireMembership: mocks.membership }));
 vi.mock("@/modules/users", () => ({ findUsersByIds: async () => [] }));
 vi.mock("@/modules/gantt", () => ({
   getGantt: async () => ({ diagrams: [], tasks: [] }),
-  getSessionTask: async () => ({}),
+  getSessionTask: mocks.getSessionTask,
+  startSessionTask: mocks.startSessionTask,
 }));
 vi.mock("@/modules/work-sessions/repository", () => ({
   start: mocks.start,
@@ -46,6 +49,8 @@ describe("tareas y archivo de cambios", () => {
     mocks.finish.mockResolvedValue({ id: sessionId });
     mocks.saveReport.mockResolvedValue({ id: sessionId });
     mocks.listReports.mockResolvedValue([]);
+    mocks.getSessionTask.mockResolvedValue({ status: "pending" });
+    mocks.startSessionTask.mockResolvedValue(undefined);
   });
   it("exige título y descripción, sin aceptar el campo anterior área", () => {
     expect(
@@ -83,6 +88,19 @@ describe("tareas y archivo de cambios", () => {
       ),
     ).rejects.toThrow("Primero cerrá tu tarea activa");
     expect(mocks.finish).not.toHaveBeenCalled();
+    expect(mocks.startSessionTask).not.toHaveBeenCalled();
+  });
+  it("pone en curso la actividad vinculada después de iniciar la tarea", async () => {
+    const input = { teamId, title: "Filtros", description: "Cambio", ganttTaskId: sessionId };
+    await sessions.startSession(input, userId);
+    expect(mocks.startSessionTask).toHaveBeenCalledWith(teamId, sessionId, userId);
+    expect(mocks.start.mock.invocationCallOrder[0]).toBeLessThan(mocks.startSessionTask.mock.invocationCallOrder[0]);
+  });
+  it("no inicia ni cambia la actividad si está completada o no se puede trabajar en ella", async () => {
+    mocks.getSessionTask.mockRejectedValueOnce(new Error("La tarea del Gantt ya está terminada."));
+    await expect(sessions.startSession({ teamId, title: "Filtros", description: "Cambio", ganttTaskId: sessionId }, userId)).rejects.toThrow("ya está terminada");
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.startSessionTask).not.toHaveBeenCalled();
   });
   it("guarda el .md únicamente en una tarea activa propia", async () => {
     const report = {
@@ -111,6 +129,8 @@ describe("tareas y archivo de cambios", () => {
       { id: "a", name: "uno.md" },
       { id: "b", name: "dos.md" },
     ]);
+    expect(mocks.listReports).toHaveBeenCalledTimes(1);
+    expect(mocks.listReports).toHaveBeenCalledWith([sessionId]);
   });
   it("cierra únicamente el ID de la tarea enviada y permite adjuntar el informe final", async () => {
     await sessions.finishSession(teamId, sessionId, userId);

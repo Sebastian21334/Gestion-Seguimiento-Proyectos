@@ -33,6 +33,7 @@ vi.mock("@/modules/users", () => ({
 vi.mock("@/modules/gantt", () => ({
   getGantt: async () => ({ diagrams: [], tasks: [] }),
   getSessionTask: async () => ({}),
+  startSessionTask: async () => {},
 }));
 vi.mock("@/modules/documents/repository", () => ({
   insert: mocks.insertDoc,

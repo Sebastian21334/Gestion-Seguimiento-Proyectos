@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ membership: vi.fn(), task: vi.fn(), update: vi.fn(), diagram: vi.fn(), create: vi.fn() }));
+const mocks = vi.hoisted(() => ({ membership: vi.fn(), task: vi.fn(), update: vi.fn(), diagram: vi.fn(), create: vi.fn(), activate: vi.fn() }));
 vi.mock("@/modules/teams", () => ({ requireMembership: mocks.membership }));
 vi.mock("@/modules/users", () => ({ findUsersByIds: vi.fn() }));
-vi.mock("@/modules/gantt/repository", () => ({ findTask: mocks.task, updateTask: mocks.update, findDiagram: mocks.diagram, createTask: mocks.create }));
+vi.mock("@/modules/gantt/repository", () => ({ findTask: mocks.task, updateTask: mocks.update, findDiagram: mocks.diagram, createTask: mocks.create, activatePendingTask: mocks.activate }));
 import { taskSchema, updateTaskSchema } from "@/modules/gantt/schemas";
-import { moveTask, getSessionTask, addTask, editTask } from "@/modules/gantt/service";
+import { moveTask, getSessionTask, startSessionTask, addTask, editTask } from "@/modules/gantt/service";
 const teamId = "00000000-0000-4000-8000-000000000001";
 const taskId = "00000000-0000-4000-8000-000000000002";
 const userId = "00000000-0000-4000-8000-000000000003";
@@ -15,6 +15,13 @@ describe("permisos del Gantt", () => {
     await expect(moveTask({ teamId, taskId, startDate: "2026-01-01", endDate: "2026-01-02" }, userId)).rejects.toMatchObject({ status: 403 });
     await expect(getSessionTask(teamId, taskId, userId)).rejects.toMatchObject({ status: 403 });
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+  it("exige pertenencia antes de activar la actividad vinculada", async () => {
+    mocks.membership.mockRejectedValueOnce(new Error("No sos miembro de este equipo."));
+    await expect(startSessionTask(teamId, taskId, userId)).rejects.toThrow("No sos miembro");
+    expect(mocks.activate).not.toHaveBeenCalled();
+    await startSessionTask(teamId, taskId, userId);
+    expect(mocks.activate).toHaveBeenCalledWith(teamId, taskId, userId);
   });
   it("permite editar tareas sin responsable, propias o al dueño", async () => {
     for (const [role, assigneeId] of [["member", null], ["member", userId], ["owner", another]] as const) {

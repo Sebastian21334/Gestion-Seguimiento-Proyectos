@@ -6,7 +6,7 @@ import { ActionForm } from "@/shared/ui/action-form";
 import { Avatar } from "@/shared/ui/avatar";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Icon } from "@/shared/ui/icon";
-import { ReportField } from "./report-field";
+import { SessionFiles } from "./session-files";
 import { SessionHistory } from "./session-history";
 import styles from "./board.module.css";
 import { ReportDownload } from "./report-download";
@@ -14,7 +14,6 @@ import {
   boardAction,
   startSessionAction,
   finishSessionAction,
-  uploadSessionReportAction,
 } from "../actions";
 
 type BoardData = Awaited<ReturnType<typeof boardAction>>;
@@ -175,7 +174,7 @@ export function WorkBoard({
               </div>
             )}
           </section>
-          <SessionHistory sessions={data.history} slug={slug} />
+          <SessionHistory sessions={data.history} slug={slug} currentUserId={currentUserId} onSaved={() => { void mutate(); }} />
         </div>
         <aside className="board-aside">
           <section className="panel start-panel">
@@ -190,32 +189,7 @@ export function WorkBoard({
             </p>
             {mine ? (
               <>
-                {mine.reports.length > 0 && (
-                  <div className="session-attachments">
-                    <strong>Archivos cargados</strong>
-                    {mine.reports.map((report) => (
-                      <ReportDownload
-                        key={report.id}
-                        teamId={teamId}
-                        sessionId={mine.id}
-                        reportId={report.id}
-                        name={report.name}
-                      />
-                    ))}
-                  </div>
-                )}
-                <ActionForm
-                  action={uploadSessionReportAction}
-                  submitLabel="Agregar archivos .md"
-                  onSuccess={() => {
-                    void mutate();
-                  }}
-                  resetOnSuccess
-                >
-                  <input type="hidden" name="teamId" value={teamId} />
-                  <input type="hidden" name="sessionId" value={mine.id} />
-                  <ReportField required />
-                </ActionForm>
+                <SessionFiles key={mine.id} teamId={teamId} sessionId={mine.id} reports={mine.reports} canEdit onSaved={() => { void mutate(); }} />
                 <hr />
                 <ActionForm
                   action={finishSessionAction}

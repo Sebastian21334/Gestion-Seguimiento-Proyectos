@@ -64,3 +64,30 @@ export const workSessionReports = pgTable(
   },
   (table) => [index("work_session_reports_session_idx").on(table.sessionId)],
 );
+
+export const reportChangeAction = pgEnum("report_change_action", [
+  "added",
+  "removed",
+]);
+export const workSessionReportChanges = pgTable(
+  "work_session_report_changes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => workSessions.id, { onDelete: "cascade" }),
+    // Sin FK al adjunto: el registro debe sobrevivir a su eliminación.
+    reportId: uuid("report_id").notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    action: reportChangeAction("action").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("work_session_report_changes_session_idx").on(table.sessionId, table.createdAt),
+  ],
+);

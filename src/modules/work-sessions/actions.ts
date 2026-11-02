@@ -84,6 +84,31 @@ export async function finishSessionAction(
     return { success: true, message: "Tarea cerrada." };
   });
 }
+export async function deleteSessionReportAction(
+  _previous: ActionState,
+  form: FormData,
+) {
+  return runAction(async () => {
+    const user = await requireCurrentUser();
+    const data = schemas.downloadReportSchema.parse(Object.fromEntries(form));
+    await service.deleteSessionReport(
+      data.teamId,
+      data.sessionId,
+      data.reportId,
+      user.id,
+    );
+    revalidatePath("/", "layout");
+    return {
+      success: true,
+      message: "Archivo eliminado. El cambio quedó registrado en el historial.",
+    };
+  });
+}
+export async function reportHistoryAction(input: unknown) {
+  const user = await requireCurrentUser();
+  const data = schemas.reportRequestSchema.parse(input);
+  return service.getReportHistory(data.teamId, data.sessionId, user.id);
+}
 export async function downloadSessionReportAction(input: unknown) {
   let report: { name: string; content: string } | undefined;
   const state = await runAction(async () => {

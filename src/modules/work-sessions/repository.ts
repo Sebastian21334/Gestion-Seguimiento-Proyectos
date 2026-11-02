@@ -1,7 +1,11 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/shared/db";
-import { workSessions, workSessionReports } from "./schema";
+import {
+  workSessions,
+  workSessionReports,
+  workSessionReportChanges,
+} from "./schema";
 import type { MarkdownReport } from "./schemas";
 
 // El contenido del archivo solo se consulta al descargarlo, no en cada polling.
@@ -99,12 +103,11 @@ export async function saveReport(
           eq(workSessions.teamId, teamId),
           eq(workSessions.id, sessionId),
           eq(workSessions.userId, userId),
-          eq(workSessions.status, "active"),
         ),
       )
       .limit(1);
     if (!session) return undefined;
-    await tx
+    const added = await tx
       .insert(workSessionReports)
       .values(
         reports.map((report) => ({
@@ -112,9 +115,72 @@ export async function saveReport(
           name: report.name,
           content: report.content,
         })),
-      );
+      )
+      .returning({ id: workSessionReports.id, name: workSessionReports.name });
+    await tx.insert(workSessionReportChanges).values(
+      added.map((report) => ({
+        sessionId,
+        reportId: report.id,
+        name: report.name,
+        userId,
+        action: "added" as const,
+      })),
+    );
     return session;
   });
+}
+export async function removeReport(
+  teamId: string,
+  sessionId: string,
+  reportId: string,
+  userId: string,
+) {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`${teamId}:${userId}`}, 0))`,
+    );
+    const [session] = await tx
+      .select({ id: workSessions.id })
+      .from(workSessions)
+      .where(and(
+        eq(workSessions.teamId, teamId),
+        eq(workSessions.id, sessionId),
+        eq(workSessions.userId, userId),
+      ))
+      .limit(1);
+    if (!session) return undefined;
+    const [removed] = await tx
+      .delete(workSessionReports)
+      .where(and(
+        eq(workSessionReports.sessionId, sessionId),
+        eq(workSessionReports.id, reportId),
+      ))
+      .returning({ id: workSessionReports.id, name: workSessionReports.name });
+    if (!removed) return undefined;
+    await tx.insert(workSessionReportChanges).values({
+      sessionId,
+      reportId: removed.id,
+      name: removed.name,
+      userId,
+      action: "removed",
+    });
+    return removed;
+  });
+}
+export async function reportHistory(teamId: string, sessionId: string) {
+  return db
+    .select({
+      id: workSessionReportChanges.id,
+      reportId: workSessionReportChanges.reportId,
+      name: workSessionReportChanges.name,
+      action: workSessionReportChanges.action,
+      userId: workSessionReportChanges.userId,
+      createdAt: workSessionReportChanges.createdAt,
+    })
+    .from(workSessionReportChanges)
+    .innerJoin(workSessions, eq(workSessionReportChanges.sessionId, workSessions.id))
+    .where(and(eq(workSessions.teamId, teamId), eq(workSessions.id, sessionId)))
+    .orderBy(desc(workSessionReportChanges.createdAt), desc(workSessionReportChanges.id));
 }
 export async function finish(
   teamId: string,

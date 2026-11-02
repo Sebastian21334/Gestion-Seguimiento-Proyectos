@@ -54,7 +54,7 @@ export function TaskPanel({ teamId, diagramId, task, tasks, phases, comments, me
   const [tab, setTab] = useState<"details" | "comments" | "files" | "work">("details");
   const [newStartDate, setNewStartDate] = useState(todayDate);
   const related = sessions.filter(session => session.ganttTaskId === task?.id);
-  const files = related.filter(session => session.reports.length);
+  const files = related;
   const phase = phases.find(phase => phase.id === task?.phaseId);
   const status = task ? taskStatus(task) : "pending";
   const fields = <Fields members={members} task={task} tasks={tasks} phases={phases} sessions={sessions} disabled={!!task && !task.canEdit} onStartDateChange={setNewStartDate} />;
@@ -85,7 +85,7 @@ export function TaskPanel({ teamId, diagramId, task, tasks, phases, comments, me
         <ActionForm action={addGanttCommentAction} submitLabel="Comentar" onSuccess={() => onSaved()} resetOnSuccess><input type="hidden" name="teamId" value={teamId} /><input type="hidden" name="taskId" value={task.id} /><label>Nuevo comentario<textarea name="content" required maxLength={2000} rows={3} placeholder="Compartí una actualización con el equipo" /></label></ActionForm>
         {comments.length ? comments.map(comment => <article key={comment.id}><strong>{comment.authorName}</strong><time>{dateTime(comment.createdAt)}</time><p>{comment.content}</p></article>) : <p className="g2-empty-small">Todavía no hay comentarios.</p>}
       </div>}
-      {tab === "files" && <div className="g2-work-list">{files.length ? files.map(session => <article className="g2-work-card" key={session.id}><span className="g2-work-icon"><Icon name="file" size={16} /></span><div><strong>{session.title}</strong><p>Por {session.user.name}</p><div className="g2-work-files">{attachments[session.id]}</div></div></article>) : <div className="g2-empty-small"><Icon name="attachment" size={22} /><strong>Sin archivos adjuntos</strong><p>Los archivos de las sesiones asociadas a esta tarea aparecerán acá. Podés cargarlos desde tu tarea activa en el tablero.</p></div>}</div>}
+      {tab === "files" && <div className="g2-work-list">{files.length ? files.map(session => <article className="g2-work-card" key={session.id}><span className="g2-work-icon"><Icon name="file" size={16} /></span><div><strong>{session.title}</strong><p>Por {session.user.name}</p><div className="g2-work-files">{attachments[session.id]}</div></div></article>) : <div className="g2-empty-small"><Icon name="attachment" size={22} /><strong>Sin archivos adjuntos</strong><p>Iniciá una sesión de trabajo asociada a esta tarea desde el tablero para agregar archivos.</p></div>}</div>}
       {tab === "work" && <div className="g2-work-list">{related.length ? related.map(session => <article className="g2-work-card" key={session.id}><span className="g2-work-icon"><Icon name="clock" size={16} /></span><div><strong>{session.title}</strong><p>Por {session.user.name}</p><p>Inicio: {dateTime(session.startedAt)}</p><p>Fin: {session.endedAt ? dateTime(session.endedAt) : "En curso"}</p><p suppressHydrationWarning>Duración: {duration(session)}</p><div className="g2-work-files">{session.reports.length ? attachments[session.id] : "Sin archivos adjuntos"}</div></div></article>) : <div className="g2-empty-small"><Icon name="clock" size={22} /><strong>Todavía no hay trabajo registrado</strong><p>Las sesiones asociadas aparecerán acá, con sus horarios y archivos.</p></div>}</div>}
     </div>
   </aside>;

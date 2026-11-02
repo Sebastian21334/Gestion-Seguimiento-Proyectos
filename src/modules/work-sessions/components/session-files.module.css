@@ -1,0 +1,52 @@
+.files {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  color: var(--ink);
+}
+.list {
+  display: grid;
+  gap: 12px;
+}
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.file > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.remove {
+  display: grid;
+  gap: 6px;
+}
+.remove > fieldset {
+  display: none;
+}
+.remove > button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.files summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.history {
+  display: grid;
+  gap: 12px;
+  padding-left: 20px;
+  margin: 14px 0 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.history p {
+  margin: 0 0 4px;
+}
+.history time {
+  color: var(--muted);
+  font-size: 12px;
+}

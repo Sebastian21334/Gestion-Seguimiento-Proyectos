@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   findReport: vi.fn(),
   saveReport: vi.fn(),
   listReports: vi.fn(),
+  removeReport: vi.fn(),
+  reportHistory: vi.fn(),
   getSessionTask: vi.fn(),
   startSessionTask: vi.fn(),
 }));
@@ -33,6 +35,8 @@ vi.mock("@/modules/work-sessions/repository", () => ({
   findReport: mocks.findReport,
   saveReport: mocks.saveReport,
   listReports: mocks.listReports,
+  removeReport: mocks.removeReport,
+  reportHistory: mocks.reportHistory,
 }));
 import * as sessions from "@/modules/work-sessions/service";
 
@@ -102,7 +106,7 @@ describe("tareas y archivo de cambios", () => {
     expect(mocks.start).not.toHaveBeenCalled();
     expect(mocks.startSessionTask).not.toHaveBeenCalled();
   });
-  it("guarda el .md únicamente en una tarea activa propia", async () => {
+  it("guarda el .md únicamente en una tarea propia, activa o finalizada", async () => {
     const report = {
       name: "cambios.md",
       content: "# Cambios\nFiltro agregado",
@@ -114,7 +118,32 @@ describe("tareas y archivo de cambios", () => {
     mocks.saveReport.mockResolvedValue(undefined);
     await expect(
       sessions.uploadSessionReport(teamId, sessionId, userId, [report]),
-    ).rejects.toThrow("tarea activa");
+    ).rejects.toThrow("tus propias tareas");
+  });
+  it("elimina únicamente el adjunto solicitado y rechaza una tarea ajena o un archivo inexistente", async () => {
+    mocks.removeReport.mockResolvedValueOnce({ id: "report", name: "cambios.md" });
+    await sessions.deleteSessionReport(teamId, sessionId, "report", userId);
+    expect(mocks.removeReport).toHaveBeenCalledWith(teamId, sessionId, "report", userId);
+    expect(mocks.finish).not.toHaveBeenCalled();
+    expect(mocks.startSessionTask).not.toHaveBeenCalled();
+    mocks.removeReport.mockResolvedValueOnce(undefined);
+    await expect(sessions.deleteSessionReport(teamId, sessionId, "report", userId)).rejects.toThrow("no existe o la tarea no te pertenece");
+  });
+  it("deniega altas, eliminaciones y acceso al historial a quien no pertenece al equipo", async () => {
+    mocks.membership.mockRejectedValue(new Error("Sin permiso"));
+    await expect(sessions.uploadSessionReport(teamId, sessionId, userId, [{ name: "a.md", content: "Cambios" }])).rejects.toThrow("Sin permiso");
+    await expect(sessions.deleteSessionReport(teamId, sessionId, "report", userId)).rejects.toThrow("Sin permiso");
+    await expect(sessions.getReportHistory(teamId, sessionId, userId)).rejects.toThrow("Sin permiso");
+    expect(mocks.saveReport).not.toHaveBeenCalled();
+    expect(mocks.removeReport).not.toHaveBeenCalled();
+    expect(mocks.reportHistory).not.toHaveBeenCalled();
+  });
+  it("conserva en el historial el nombre y la fecha de archivos eliminados", async () => {
+    const removed = { id: "change", reportId: "report", name: "eliminado.md", action: "removed", userId, createdAt: new Date("2026-11-01T12:00:00Z") };
+    mocks.reportHistory.mockResolvedValue([removed]);
+    await expect(sessions.getReportHistory(teamId, sessionId, userId)).resolves.toEqual([{ ...removed, userName: "Exmiembro" }]);
+    expect(mocks.reportHistory).toHaveBeenCalledWith(teamId, sessionId);
+    expect(mocks.findReport).not.toHaveBeenCalled();
   });
   it("muestra todos los archivos de cada tarea sin incluir su contenido", async () => {
     mocks.active.mockResolvedValue([

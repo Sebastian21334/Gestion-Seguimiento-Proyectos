@@ -8,6 +8,7 @@ import { EmptyState } from "@/shared/ui/empty-state";
 import { Icon } from "@/shared/ui/icon";
 import type { boardAction } from "../actions";
 import { ReportDownload } from "./report-download";
+import { SessionFiles } from "./session-files";
 import styles from "./board.module.css";
 
 type Session = Awaited<ReturnType<typeof boardAction>>["history"][number];
@@ -75,10 +76,14 @@ function SessionDetail({
   session,
   slug,
   onClose,
+  currentUserId,
+  onSaved,
 }: {
   session: Session;
   slug: string;
   onClose: () => void;
+  currentUserId: string;
+  onSaved: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const headingId = useId();
@@ -155,11 +160,13 @@ function SessionDetail({
           <div className={styles.detailColumn}>
             <DetailField icon="file" label="Duración">{duration(session, true)}</DetailField>
             <DetailField icon="list" label="Descripción"><span className={styles.description}>{session.description || "Sin descripción"}</span></DetailField>
-            <DetailField icon="attachment" label={session.reports.length === 1 ? "Archivo adjunto" : "Archivos adjuntos"}>
-              {session.reports.length ? <div className={styles.attachments}><Attachments session={session} /></div> : <span className="muted">Sin archivos adjuntos</span>}
-            </DetailField>
           </div>
         </dl>
+      </section>
+
+      <section className={styles.detailCard} aria-label="Administrar archivos">
+        <h3>Archivos de la tarea</h3>
+        <SessionFiles teamId={session.teamId} sessionId={session.id} reports={session.reports} canEdit={session.userId === currentUserId} onSaved={onSaved} />
       </section>
 
       <footer className={styles.detailFooter}>
@@ -170,8 +177,9 @@ function SessionDetail({
   );
 }
 
-export function SessionHistory({ sessions, slug }: { sessions: Session[]; slug: string }) {
-  const [selected, setSelected] = useState<Session | null>(null);
+export function SessionHistory({ sessions, slug, currentUserId, onSaved }: { sessions: Session[]; slug: string; currentUserId: string; onSaved: () => void }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = sessions.find(session => session.id === selectedId);
   return (
     <section className={`panel ${styles.historyPanel}`}>
       <div className="section-heading">
@@ -190,7 +198,7 @@ export function SessionHistory({ sessions, slug }: { sessions: Session[]; slug: 
                 className={styles.historyOpen}
                 aria-label={`Ver detalle de ${session.title}, de ${session.user.name}`}
                 aria-haspopup="dialog"
-                onClick={() => setSelected(session)}
+                onClick={() => setSelectedId(session.id)}
               />
               <Avatar name={session.user.name} githubUsername={session.user.githubUsername} />
               <div className={styles.historyMain}>
@@ -207,7 +215,7 @@ export function SessionHistory({ sessions, slug }: { sessions: Session[]; slug: 
       ) : (
         <EmptyState title="El historial empieza con ustedes" icon="clock">Las sesiones terminadas aparecerán acá.</EmptyState>
       )}
-      {selected && <SessionDetail session={selected} slug={slug} onClose={() => setSelected(null)} />}
+      {selected && <SessionDetail key={selected.id} session={selected} slug={slug} currentUserId={currentUserId} onSaved={onSaved} onClose={() => setSelectedId(null)} />}
     </section>
   );
 }

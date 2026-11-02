@@ -89,7 +89,32 @@ export async function uploadSessionReport(
 ) {
   await requireMembership(teamId, userId);
   if (!(await repository.saveReport(teamId, sessionId, userId, reports)))
-    throw new ValidationError("Solo podés cargar archivos en tu tarea activa.");
+    throw new ValidationError("Solo podés agregar archivos a tus propias tareas.");
+}
+export async function deleteSessionReport(
+  teamId: string,
+  sessionId: string,
+  reportId: string,
+  userId: string,
+) {
+  await requireMembership(teamId, userId);
+  if (!(await repository.removeReport(teamId, sessionId, reportId, userId)))
+    throw new ValidationError("El archivo ya no existe o la tarea no te pertenece.");
+}
+export async function getReportHistory(
+  teamId: string,
+  sessionId: string,
+  userId: string,
+) {
+  await requireMembership(teamId, userId);
+  const changes = await repository.reportHistory(teamId, sessionId);
+  const users = await findUsersByIds([
+    ...new Set(changes.map((change) => change.userId)),
+  ]);
+  return changes.map((change) => ({
+    ...change,
+    userName: users.find((user) => user.id === change.userId)?.name ?? "Exmiembro",
+  }));
 }
 export async function finishSession(
   teamId: string,

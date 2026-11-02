@@ -491,6 +491,15 @@
   padding: 16px;
 }
 
+.detailCard + .detailCard {
+  margin-top: 16px;
+}
+
+.detailCard > h3 {
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
 .detailPerson {
   display: flex;
   align-items: center;

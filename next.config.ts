@@ -2,9 +2,14 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   poweredByHeader: false,
-  // Mantener la resolución nativa de las dependencias opcionales de ws.
-  // Al empaquetarlas, el cliente de Neon puede fallar con bufferUtil.mask.
-  serverExternalPackages: ["@neondatabase/serverless", "ws"],
+  // Conservar la resolución nativa del cliente de Neon y las fuentes de PDFKit.
+  serverExternalPackages: ["@neondatabase/serverless", "ws", "pdfkit"],
+  outputFileTracingIncludes: {
+    "/t/*/gantt/exportar/*": [
+      "./node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff",
+      "./node_modules/@fontsource/noto-sans/files/noto-sans-latin-700-normal.woff",
+    ],
+  },
   async headers() {
     return [
       {

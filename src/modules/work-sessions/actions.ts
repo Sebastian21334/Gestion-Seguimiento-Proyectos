@@ -122,3 +122,7 @@ export async function downloadSessionReportAction(input: unknown) {
   });
   return { ...state, report };
 }
+
+export async function downloadSharedSessionReportAction(token: unknown) {
+  return typeof token === "string" ? service.getSharedSessionReport(token) : null;
+}

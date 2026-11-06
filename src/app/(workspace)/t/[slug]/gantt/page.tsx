@@ -21,6 +21,7 @@ export default async function GanttPage({
   return (
     <GanttBoard
       teamId={team.id}
+      teamSlug={slug}
       data={data}
       members={members}
       sessions={sessions}

@@ -39,6 +39,8 @@ vi.mock("@/modules/work-sessions/repository", () => ({
   reportHistory: mocks.reportHistory,
 }));
 import * as sessions from "@/modules/work-sessions/service";
+import { sessionReportLink } from "@/shared/session-report-links";
+import { GET as downloadSharedReport } from "@/app/descargas/gantt/[token]/route";
 
 const teamId = "00000000-0000-4000-8000-000000000001";
 const sessionId = "00000000-0000-4000-8000-000000000002";
@@ -224,5 +226,42 @@ describe("validación de archivos Markdown", () => {
       optionalMarkdownFile(new File([], "")),
     ).resolves.toBeUndefined();
     await expect(optionalMarkdownFile("archivo.md")).rejects.toThrow();
+  });
+});
+
+describe("enlaces públicos de los PDF del Gantt", () => {
+  const reportId = "00000000-0000-4000-8000-000000000004";
+  const token = () => new URL(sessionReportLink(teamId, sessionId, reportId)).pathname.split("/").at(-1)!;
+
+  it("permite descargar solo el archivo firmado sin pedir membresía", async () => {
+    const report = { name: "revisión.md", content: "# Cambios" };
+    mocks.findReport.mockResolvedValueOnce(report);
+    const response = await downloadSharedReport(new Request("https://equipo.test"), {
+      params: Promise.resolve({ token: token() }),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Disposition")).toContain("revisi%C3%B3n.md");
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(await response.text()).toBe(report.content);
+    expect(mocks.findReport).toHaveBeenCalledWith(teamId, sessionId, reportId);
+    expect(mocks.membership).not.toHaveBeenCalled();
+  });
+
+  it("rechaza un enlace manipulado antes de acceder a la base", async () => {
+    const signed = token();
+    for (const altered of [
+      signed.replace(teamId, userId),
+      signed.replace(sessionId, userId),
+      signed.replace(reportId, userId),
+      signed.slice(0, -1) + (signed.endsWith("A") ? "B" : "A"),
+    ]) {
+      await expect(sessions.getSharedSessionReport(altered)).resolves.toBeNull();
+    }
+    expect(mocks.findReport).not.toHaveBeenCalled();
+  });
+
+  it("deja de entregar el archivo si fue eliminado", async () => {
+    mocks.findReport.mockResolvedValueOnce(undefined);
+    await expect(sessions.getSharedSessionReport(token())).resolves.toBeNull();
   });
 });

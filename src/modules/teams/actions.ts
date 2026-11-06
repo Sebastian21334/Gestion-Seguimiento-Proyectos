@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/shared/session";
 import { runAction } from "@/shared/errors/action";
-import { DomainError } from "@/shared/errors";
+import { DomainError, NotFoundError } from "@/shared/errors";
 import type { ActionState } from "@/shared/ui/action-state";
 import * as schemas from "./schemas";
 import * as service from "./service";
@@ -12,12 +12,16 @@ import * as service from "./service";
 export async function myTeamsAction() {
   return service.listMyTeams((await requireCurrentUser()).id);
 }
-export async function teamPageAction(slug: unknown) {
+export async function teamForRequestAction(slug: unknown) {
   const user = await requireCurrentUser();
   const parsed = schemas.slugSchema.safeParse(slug);
-  if (!parsed.success) notFound();
+  if (!parsed.success) throw new NotFoundError();
+  return service.getTeamBySlug(parsed.data, user.id);
+}
+
+export async function teamPageAction(slug: unknown) {
   try {
-    return await service.getTeamBySlug(parsed.data, user.id);
+    return await teamForRequestAction(slug);
   } catch (error) {
     if (error instanceof DomainError && [403, 404].includes(error.status))
       notFound();

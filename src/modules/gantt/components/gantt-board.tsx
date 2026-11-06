@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm } from "@/shared/ui/action-form";
 import { Icon } from "@/shared/ui/icon";
-import { createDiagramAction, moveGanttTaskAction } from "../actions";
+import { createDiagramAction, deleteGanttTaskAction, moveGanttTaskAction } from "../actions";
 import { TaskPanel } from "./task-panel";
 import { PhasePanel } from "./phase-panel";
 import { GanttChart } from "./gantt-chart";
@@ -21,12 +21,14 @@ const todayDate = () =>
   }).format(new Date());
 export function GanttBoard({
   teamId,
+  teamSlug,
   data,
   members,
   sessions,
   attachments,
 }: {
   teamId: string;
+  teamSlug: string;
   data: Gantt;
   members: Member[];
   sessions: Session[];
@@ -46,6 +48,7 @@ export function GanttBoard({
     message: string;
   } | null>(null);
   const [moving, setMoving] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const knownDiagrams = useRef(data.diagrams.map(diagram => diagram.id));
   const diagramMenu = useRef<HTMLDetailsElement>(null);
   const count = scale === "day" ? 60 : scale === "week" ? 140 : periodDays;
@@ -54,6 +57,11 @@ export function GanttBoard({
   // Dejar espacio antes de la fecha elegida para poder desplazarse al pasado.
   const first = focusDay - Math.floor(count / 2);
   const today = dayNumber(todayDate());
+  const hasExportFiles = sessions.some((session) =>
+    session.reports.length > 0 && data.tasks.some((task) =>
+      task.id === session.ganttTaskId && task.diagramId === diagramId,
+    ),
+  );
   const selected =
     panel && panel !== "new"
       ? data.tasks.find(
@@ -74,6 +82,27 @@ export function GanttBoard({
     setPhasePanel(null);
   }
   function openTask(id: string) { setPhasePanel(null); setPanel(id); }
+  async function deleteTask(task: Task) {
+    if (!window.confirm(`¿Eliminar la tarea “${task.title}”? Se borrarán sus comentarios y dependencias. Las sesiones y los archivos se conservarán.`)) return;
+
+    const form = new FormData();
+    form.set("teamId", teamId);
+    form.set("taskId", task.id);
+    setDeleting(true);
+    setNotice(null);
+    try {
+      const result = await deleteGanttTaskAction({ success: false, message: "" }, form);
+      setNotice(result);
+      if (result.success) {
+        setPanel((current) => current === task.id ? null : current);
+        refresh();
+      }
+    } catch {
+      setNotice({ success: false, message: "No pudimos eliminar la tarea. Intentá nuevamente." });
+    } finally {
+      setDeleting(false);
+    }
+  }
   async function move(task: Task, delta: number) {
     setMoving(task.id);
     setNotice(null);
@@ -214,6 +243,19 @@ export function GanttBoard({
               <Icon name="plus" size={17} /> Nueva tarea
             </button>
             <button type="button" className="g2-secondary" onClick={() => { setPanel(null); setPhasePanel("new"); }}><Icon name="plus" size={16} /> Nueva fase</button>
+            <form
+              action={`/t/${encodeURIComponent(teamSlug)}/gantt/exportar/${diagramId}`}
+              method="post"
+              onSubmit={(event) => {
+                if (hasExportFiles && !window.confirm("Cualquiera que reciba el PDF podrá descargar los archivos .md incluidos. ¿Exportar el diagrama?")) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              <button type="submit" className="g2-secondary" disabled={!diagramId}>
+                <Icon name="file" size={16} /> Exportar PDF
+              </button>
+            </form>
             <div className="g2-navigate">
               <button
                 type="button"
@@ -247,7 +289,7 @@ export function GanttBoard({
             </p>
           )}
           <div className={`g2-workspace ${panel || phasePanel ? "with-panel" : ""}`}>
-            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} focusDay={focusDay} focusVersion={focusVersion} scale={scale} today={today} selectedId={panel} moving={moving} sessions={sessions} onSelect={openTask} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
+            <GanttChart data={data} diagramId={diagramId} search={search} first={first} count={count} focusDay={focusDay} focusVersion={focusVersion} scale={scale} today={today} selectedId={panel} moving={moving} deleting={deleting} sessions={sessions} onSelect={openTask} onDelete={(task) => { void deleteTask(task); }} onEditPhase={id => { setPanel(null); setPhasePanel(id); }} onMove={(task, days) => { void move(task, days); }} />
             {phasePanel && <PhasePanel key={phasePanel} teamId={teamId} diagramId={diagramId} phase={data.phases.find(phase => phase.id === phasePanel)} onClose={() => setPhasePanel(null)} onSaved={() => { setPhasePanel(null); refresh(); }} />}
             {panel && (panel === "new" || selected) && (
               <TaskPanel

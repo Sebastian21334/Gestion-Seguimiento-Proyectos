@@ -5,6 +5,7 @@ import * as repository from "./repository";
 import { NotFoundError, ValidationError } from "@/shared/errors";
 import type { MarkdownReport } from "./schemas";
 import { getGantt, getSessionTask, startSessionTask } from "@/modules/gantt";
+import { readSessionReportLink } from "@/shared/session-report-links";
 
 export function matchingTitle(left: string, right: string) {
   return (
@@ -138,6 +139,12 @@ export async function getSessionReport(
   if (!report?.name || !report.content)
     throw new NotFoundError("Esta sesión no tiene un archivo .md adjunto.");
   return { name: report.name, content: report.content };
+}
+
+export async function getSharedSessionReport(token: string) {
+  const ids = readSessionReportLink(token);
+  if (!ids) return null;
+  return (await repository.findReport(...ids)) ?? null;
 }
 export async function memberHistory(
   teamId: string,

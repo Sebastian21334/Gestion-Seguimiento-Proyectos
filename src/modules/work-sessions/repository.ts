@@ -209,6 +209,23 @@ export async function finish(
     return closed;
   });
 }
+export async function removeSession(teamId: string, sessionId: string, userId: string) {
+  return db.transaction(async (tx) => {
+    // Serializar con el cierre de la sesión y los cambios en sus adjuntos.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`${teamId}:${userId}`}, 0))`,
+    );
+    const [removed] = await tx
+      .delete(workSessions)
+      .where(and(
+        eq(workSessions.teamId, teamId),
+        eq(workSessions.id, sessionId),
+        eq(workSessions.userId, userId),
+      ))
+      .returning({ id: workSessions.id });
+    return removed;
+  });
+}
 export async function listReports(sessionIds: string[]) {
   if (!sessionIds.length) return [];
   return db

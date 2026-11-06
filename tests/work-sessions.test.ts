@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   active: vi.fn(),
   history: vi.fn(),
   finish: vi.fn(),
+  removeSession: vi.fn(),
   findReport: vi.fn(),
   saveReport: vi.fn(),
   listReports: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@/modules/work-sessions/repository", () => ({
   active: mocks.active,
   history: mocks.history,
   finish: mocks.finish,
+  removeSession: mocks.removeSession,
   findReport: mocks.findReport,
   saveReport: mocks.saveReport,
   listReports: mocks.listReports,
@@ -177,6 +179,19 @@ describe("tareas y archivo de cambios", () => {
       sessions.getSessionReport(teamId, sessionId, sessionId, userId),
     ).rejects.toThrow("Sin permiso");
     expect(mocks.findReport).not.toHaveBeenCalled();
+  });
+  it("permite eliminar una actividad propia y rechaza una ajena o inexistente", async () => {
+    mocks.removeSession.mockResolvedValueOnce({ id: sessionId });
+    await sessions.deleteSession(teamId, sessionId, userId);
+    expect(mocks.removeSession).toHaveBeenCalledWith(teamId, sessionId, userId);
+
+    mocks.removeSession.mockResolvedValueOnce(undefined);
+    await expect(sessions.deleteSession(teamId, sessionId, userId)).rejects.toMatchObject({ status: 404 });
+  });
+  it("rechaza eliminar una actividad si el usuario no pertenece al equipo", async () => {
+    mocks.membership.mockRejectedValueOnce(new Error("Sin permiso"));
+    await expect(sessions.deleteSession(teamId, sessionId, userId)).rejects.toThrow("Sin permiso");
+    expect(mocks.removeSession).not.toHaveBeenCalled();
   });
   it("devuelve el archivo solo después de autorizar al miembro", async () => {
     mocks.findReport.mockResolvedValue({

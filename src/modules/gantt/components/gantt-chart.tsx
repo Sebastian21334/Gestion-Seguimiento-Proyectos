@@ -17,11 +17,11 @@ export const statusLabels = { pending: "Pendiente", active: "En curso", done: "C
 const ROW_HEIGHT = 44;
 type Row = { kind: "phase"; phase: Phase } | { kind: "task"; task: Task };
 
-export function GanttChart({ data, diagramId, search, first, count, focusDay, focusVersion, scale, today, selectedId, moving, deleting, sessions, onSelect, onDelete, onEditPhase, onMove }: {
+export function GanttChart({ data, diagramId, search, first, count, focusDay, focusVersion, scale, today, selectedId, moving, sessions, onSelect, onEditPhase, onMove }: {
   data: Gantt; diagramId: string; search: string; first: number; count: number;
   focusDay: number; focusVersion: number;
   scale: "day" | "week" | "month"; today: number; selectedId: string | null; moving: string | null;
-  deleting: boolean; sessions: Session[]; onSelect: (id: string) => void; onDelete: (task: Task) => void; onEditPhase: (id: string) => void; onMove: (task: Task, days: number) => void;
+  sessions: Session[]; onSelect: (id: string) => void; onEditPhase: (id: string) => void; onMove: (task: Task, days: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const viewport = useRef<HTMLDivElement>(null);
@@ -136,10 +136,7 @@ export function GanttChart({ data, diagramId, search, first, count, focusDay, fo
                 const left = Math.max(0, position.start); const right = Math.min(count * width, position.end);
                 return <div key={task.id} className={`g2-row ${selectedId === task.id ? "selected" : ""}`}>
                   <div className="g2-fixed g2-cells">
-                    <div className={styles.taskCell}>
-                      <button type="button" className={`g2-task-name ${task.phaseId ? styles.childTask : ""}`} onClick={() => onSelect(task.id)} title={`${task.title} · Prioridad: ${{ low: "Baja", medium: "Media", high: "Alta", urgent: "Urgente" }[task.priority] ?? task.priority}`}><span className={`g2-task-dot ${status}`} /><span>{task.title}</span>{(task.priority === "high" || task.priority === "urgent") && <b className={styles.priorityMark} aria-label={`Prioridad ${task.priority === "urgent" ? "urgente" : "alta"}`}>!</b>}</button>
-                      {task.canEdit && <button type="button" className={`g2-icon-button ${styles.deleteTask}`} disabled={deleting} onClick={() => onDelete(task)} title="Eliminar tarea" aria-label={`Eliminar ${task.title}`}><Icon name="delete" size={15} /></button>}
-                    </div>
+                    <button type="button" className={`g2-task-name ${task.phaseId ? styles.childTask : ""}`} onClick={() => onSelect(task.id)} title={`${task.title} · Prioridad: ${{ low: "Baja", medium: "Media", high: "Alta", urgent: "Urgente" }[task.priority] ?? task.priority}`}><span className={`g2-task-dot ${status}`} /><span>{task.title}</span>{(task.priority === "high" || task.priority === "urgent") && <b className={styles.priorityMark} aria-label={`Prioridad ${task.priority === "urgent" ? "urgente" : "alta"}`}>!</b>}</button>
                     <div className="g2-person">{task.assigneeName ? <Avatar name={task.assigneeName} githubUsername={task.assigneeGithubUsername} /> : <span className="g2-unassigned" title="Sin responsable">—</span>}</div>
                     <div><span className={`g2-badge ${status}`}>{statusLabels[status]}</span></div>
                     <span className={styles.rowProgress}>{task.progress}%</span>

@@ -19,11 +19,6 @@
 .chartGrid :global(.g2-column-head) { font-size: 10px; }
 .chartGrid :global(.g2-row) { min-height: 44px; height: 44px; }
 .chartGrid :global(.g2-task-name) { font-weight: 500; font-size: 11px; }
-.chartGrid :global(.g2-cells) > .taskCell { display: flex; align-items: center; height: 100%; padding: 0 4px 0 0; }
-.taskCell :global(.g2-task-name) { min-width: 0; padding-inline: 10px; }
-.taskCell :global(.g2-task-name) > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.taskCell .deleteTask { color: #a53c49; }
-.taskCell .deleteTask:hover { background: #fff0f2; }
 .chartGrid :global(.g2-person) { justify-content: center; }
 .chartGrid :global(.g2-person .avatar) { width: 26px; height: 26px; }
 .chartGrid :global(.g2-row.selected), .chartGrid :global(.g2-row.selected .g2-fixed) { background: #eaf3ff; }

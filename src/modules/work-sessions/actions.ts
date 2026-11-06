@@ -55,7 +55,7 @@ export async function uploadSessionReportAction(
 ) {
   return runAction(async () => {
     const user = await requireCurrentUser();
-    const data = schemas.reportRequestSchema.parse(Object.fromEntries(form));
+    const data = schemas.sessionRequestSchema.parse(Object.fromEntries(form));
     const files = form.getAll("report");
     if (!files.length || files.length > 3)
       throw new ValidationError("Seleccioná entre 1 y 3 archivos por carga.");
@@ -78,10 +78,22 @@ export async function finishSessionAction(
 ) {
   return runAction(async () => {
     const user = await requireCurrentUser();
-    const data = schemas.finishSessionSchema.parse(Object.fromEntries(form));
+    const data = schemas.sessionRequestSchema.parse(Object.fromEntries(form));
     await service.finishSession(data.teamId, data.sessionId, user.id);
     revalidatePath("/", "layout");
     return { success: true, message: "Tarea cerrada." };
+  });
+}
+export async function deleteSessionAction(
+  _previous: ActionState,
+  form: FormData,
+) {
+  return runAction(async () => {
+    const user = await requireCurrentUser();
+    const { teamId, sessionId } = schemas.sessionRequestSchema.parse(Object.fromEntries(form));
+    await service.deleteSession(teamId, sessionId, user.id);
+    revalidatePath("/", "layout");
+    return { success: true, message: "Actividad eliminada." };
   });
 }
 export async function deleteSessionReportAction(
@@ -106,7 +118,7 @@ export async function deleteSessionReportAction(
 }
 export async function reportHistoryAction(input: unknown) {
   const user = await requireCurrentUser();
-  const data = schemas.reportRequestSchema.parse(input);
+  const data = schemas.sessionRequestSchema.parse(input);
   return service.getReportHistory(data.teamId, data.sessionId, user.id);
 }
 export async function downloadSessionReportAction(input: unknown) {

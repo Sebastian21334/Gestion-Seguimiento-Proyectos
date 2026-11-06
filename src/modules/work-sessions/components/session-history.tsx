@@ -9,6 +9,7 @@ import { Icon } from "@/shared/ui/icon";
 import type { boardAction } from "../actions";
 import { ReportDownload } from "./report-download";
 import { SessionFiles } from "./session-files";
+import { SessionDelete } from "./session-delete";
 import styles from "./board.module.css";
 
 type Session = Awaited<ReturnType<typeof boardAction>>["history"][number];
@@ -168,6 +169,13 @@ function SessionDetail({
         <h3>Archivos de la tarea</h3>
         <SessionFiles teamId={session.teamId} sessionId={session.id} reports={session.reports} canEdit={session.userId === currentUserId} onSaved={onSaved} />
       </section>
+
+      {session.userId === currentUserId && (
+        <SessionDelete session={session} onDeleted={() => {
+          onClose();
+          onSaved();
+        }} />
+      )}
 
       <footer className={styles.detailFooter}>
         <button type="button" className="button button-secondary" onClick={() => dialog.current?.close()}>Cerrar</button>

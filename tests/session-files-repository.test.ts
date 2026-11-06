@@ -5,14 +5,29 @@ import type { SQL } from "drizzle-orm";
 const mocks = vi.hoisted(() => ({ transaction: vi.fn() }));
 vi.mock("@/shared/db", () => ({ db: { transaction: mocks.transaction } }));
 
-import { removeReport, saveReport } from "@/modules/work-sessions/repository";
-import { workSessionReports, workSessionReportChanges } from "@/modules/work-sessions/schema";
+import { removeReport, removeSession, saveReport } from "@/modules/work-sessions/repository";
+import { workSessions, workSessionReports, workSessionReportChanges } from "@/modules/work-sessions/schema";
 
 const teamId = "00000000-0000-4000-8000-000000000001";
 const sessionId = "00000000-0000-4000-8000-000000000002";
 const userId = "00000000-0000-4000-8000-000000000003";
 const reportId = "00000000-0000-4000-8000-000000000004";
 const dialect = new PgDialect();
+
+it("elimina una actividad por equipo, sesión y autor, sea activa o finalizada", async () => {
+  const where = vi.fn((_condition: SQL) => ({ returning: async () => [{ id: sessionId }] }));
+  const tx = { execute: vi.fn(), delete: vi.fn(() => ({ where })) };
+  mocks.transaction.mockImplementationOnce(async (callback) => callback(tx));
+
+  await expect(removeSession(teamId, sessionId, userId)).resolves.toEqual({ id: sessionId });
+  expect(tx.delete).toHaveBeenCalledWith(workSessions);
+  const query = dialect.sqlToQuery(where.mock.calls[0][0]);
+  expect(query.params).toEqual([teamId, sessionId, userId]);
+  expect(query.sql).toContain('"work_sessions"."team_id"');
+  expect(query.sql).toContain('"work_sessions"."user_id"');
+  expect(query.sql).not.toContain('"status"');
+  expect(tx.execute.mock.invocationCallOrder[0]).toBeLessThan(tx.delete.mock.invocationCallOrder[0]);
+});
 
 function transactionFixture({ authorized = true, reportExists = true, auditFails = false } = {}) {
   const sessionWhere = vi.fn((_condition: SQL) => ({ limit: async () => authorized ? [{ id: sessionId }] : [] }));

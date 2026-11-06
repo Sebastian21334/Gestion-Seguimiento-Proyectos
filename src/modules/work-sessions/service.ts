@@ -128,6 +128,12 @@ export async function finishSession(
       "La tarea ya está cerrada o no te pertenece. Actualizá el tablero.",
     );
 }
+export async function deleteSession(teamId: string, sessionId: string, userId: string) {
+  await requireMembership(teamId, userId);
+  if (!(await repository.removeSession(teamId, sessionId, userId))) {
+    throw new NotFoundError("La actividad ya no existe o no te pertenece.");
+  }
+}
 export async function getSessionReport(
   teamId: string,
   sessionId: string,

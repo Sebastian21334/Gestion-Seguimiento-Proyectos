@@ -7,6 +7,7 @@ import { Avatar } from "@/shared/ui/avatar";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { Icon } from "@/shared/ui/icon";
 import { SessionFiles } from "./session-files";
+import { SessionDelete } from "./session-delete";
 import { SessionHistory } from "./session-history";
 import styles from "./board.module.css";
 import { ReportDownload } from "./report-download";
@@ -201,6 +202,7 @@ export function WorkBoard({
                   <input type="hidden" name="teamId" value={teamId} />
                   <input type="hidden" name="sessionId" value={mine.id} />
                 </ActionForm>
+                <SessionDelete key={mine.id} session={mine} onDeleted={() => { void mutate(); }} />
               </>
             ) : (
               <ActionForm

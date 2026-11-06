@@ -7,15 +7,11 @@ export const startSessionSchema = z.object({
   description: z.string().trim().min(1, "Contanos qué vas a hacer.").max(1000),
   ganttTaskId: z.uuid("Elegí una tarea del diagrama de Gantt."),
 });
-export const finishSessionSchema = z.object({
+export const sessionRequestSchema = z.object({
   teamId: teamIdSchema,
   sessionId: z.uuid(),
 });
-export const reportRequestSchema = z.object({
-  teamId: teamIdSchema,
-  sessionId: z.uuid(),
-});
-export const downloadReportSchema = reportRequestSchema.extend({
+export const downloadReportSchema = sessionRequestSchema.extend({
   reportId: z.uuid(),
 });
 export const MAX_MARKDOWN_BYTES = 256 * 1024;
